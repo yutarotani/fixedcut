@@ -1,0 +1,41 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+汎用固定カット処理を行うページです
+{% endblock %}
+
+{% block header %}
+GeneralHeader
+{% endblock %}
+
+{% block content %}
+コンテンツ部分です
+{% endblock %}
+
+{% block serchbar %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <form class="form-group" action="general_serch" method="POST">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <label for="midashi">仮見出し:</label>
+                <input name="midashi" type="midashi" class="form-control" id="midashi">
+            </li>
+            <li class="nav-item">
+                <label for="ID">固定カットID:</label>
+                <input name="ID" type="ID" class="form-control" id="ID">
+            </li>
+            <li class="nav-item">
+                <label for="Str">一体化時文字列:</label>
+                <input name="Str" type="Str" class="form-control" id="Str">
+            </li>
+            <li class="nav-item">
+                <button type="submit" class="btn btn-primary">検索</button>
+            </li>
+        </ul>
+    </form>
+</nav>
+{% endblock %}
+
+{% block footer %}
+<a href="/">もどる</a>
+{% endblock %}

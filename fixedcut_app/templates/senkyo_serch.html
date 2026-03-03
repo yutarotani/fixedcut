@@ -1,0 +1,35 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+senkyo_serch
+{% endblock %}
+
+{% block header %}
+<h3>Senkyo Serch res</h3>
+{% endblock %}
+
+{% block content %}
+コンテンツ部分です
+{% endblock %}
+
+{% block serchbar %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <form class="form-group" action="senkyo-serch" method="POST">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <label for="ID">固定カットID:</label>
+                <input name="ID" type="ID" class="form-control" id="ID">
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">about</a>
+            </li>
+            <li class="nav-item">
+                <button type="submit" class="btn btn-primary">検索</button>
+            </li>
+        </ul>
+    </form>
+</nav>
+
+{% block footer %}
+SenkyoSerchFooter
+{% endblock %}
