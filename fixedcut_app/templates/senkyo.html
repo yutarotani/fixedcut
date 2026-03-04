@@ -31,6 +31,32 @@ SenkyoHeader
 </nav>
 {% endblock %}
 
+{% block serch_result %}
+ <div class="container mt-4">
+    <h2>検索結果結果</h2>
+    <table class="table table-striped table-hover">
+        <tr>
+            <th>仮見出し</th>
+            <th>固定カットID</th>
+            <th>一体化時文字列</th>
+        </tr>
+        {% for res in results %}
+        <tr>
+            <td>
+                {{ res.midashi }}
+            </td>
+            <td>
+                {{ res.ID }}
+            </td>
+            <td>
+                {{ res.Str }}
+            </td>
+        </tr>
+         {% endfor %}
+    </table>
+</div>
+{% endblock %}
+
 {% block footer %}
 <a href="/">もどる</a>
 {% endblock %}

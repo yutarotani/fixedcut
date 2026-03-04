@@ -25,10 +25,15 @@
             {% block header %}{% endblock %}
         </div>
 
-        <div>{% block serchbar %}{% endblock %}</div>
+        <div>
+            {% block serchbar %}{% endblock %}
+        </div>
 
         <p>{% block content %}{% endblock %}</p>
-        <p>Flaskのテンプレートから表示しています。</p>
+        
+        <div class=serch_result>
+            {% block serch_result %}{% endblock %}
+        </div>
         <div class="footer">
             {% block footer %}{% endblock %}
         </div>

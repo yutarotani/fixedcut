@@ -19,20 +19,31 @@ def senkyo_serch():
     return f'POSTdata:{req}' 
 
 
-@app.route('/general')
+@app.route('/general', methods=['GET', 'POST'])
 def general():
-    return render_template('general.html', name='General page')
-
-
-@app.route('/general_serch', methods=['GET', 'POST'])
-def general_serch():
     if request.method == 'GET':
         return render_template('general.html', name='General page')
     
     if request.method == 'POST':
+        results = []
         print("データを受け取りました")
-        req1 = request.form["midashi"]
-        req2 = request.form["ID"]
-        req3 = request.form["midashi"]
-        print([req1, req2,req3])
-        return f'POSTdata:{req1};{req2};{req3}' 
+        res1 = {}
+        res1["midashi"] = request.form["midashi"]
+        res1["ID"]  = request.form["ID"]
+        res1["Str"]  = request.form["Str"]
+
+        print(res1)
+
+        results.append(res1)
+
+        return render_template('general.html', results=results) 
+
+
+@app.route('/general_add', methods=['GET', 'POST'])
+def general_add():
+    return render_template('general_add')
+
+
+@app.route('/general_detail')
+def general_detail():
+    return render_template('general_detail.html')

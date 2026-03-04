@@ -1,0 +1,3 @@
+DEBUG = True
+SQLALCHEMY_DATABASE_URI = 'sqlite:///fixedcut_app.db'
+SQLALCHEMY_TRACK_MODIFICATIONS = True
