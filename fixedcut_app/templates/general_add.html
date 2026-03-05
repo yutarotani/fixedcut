@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+汎用固定カット処理を行うページです
+{% endblock %}
+
+{% block header %}
+<h4>固定カットレコード追加の画面</h4>
+{% endblock %}
+
+{% block content %}
+<h3>・<a href="/general">固定カットを検索する</a></h3>
+{% endblock %}
+
+{% block serch_result %}
+ <div class="container mt-4">
+    <h4>レコード追加フォーム</h4>
+    <form action="/general_add" method="POST" enctype="multipart/form-data">
+        <table class="table table-striped table-hover">
+            <tr>
+                <th width="100">操作</th>
+                <th>固定カットID</th>
+                <th>仮見出し</th>
+                <th>一体化時文字列</th>
+                <th>カラーEPS</th>
+                <th>モノクロEPS</th>
+                <th>マスタ登録</th>
+            </tr>
+            <tr>
+                <td width="100"><button type="submit" class="btn btn-primary" width="100">追加</button></td>
+                <td><input name="id" type="text"></input></td>
+                <td><input name="midashi" type="text"></input></td>
+                <td><input name="Str" type="text"></input></td>
+                <td><input type="file" name="colorUrl" accept=".eps" /></td>
+                <td><input type="file" name="monoUrl" accept=".eps" /></td>
+                <td><input name="updateFlg" type="checkbox"></input></td>
+            </tr>
+        </table>
+    </form>
+    <a href='general'>back<a>
+</div>
+{% endblock %}
+
+{% block footer %}
+<a href="/">もどる</a>
+{% endblock %}

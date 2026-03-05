@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="static/css/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <head>
         <title>{% block title%}{% endblock %}</title>
     </head>
     <body>
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light pad">
             <ul class="navbar-nav">
                 <li class="nav-item">
                     <a class="nav-link" href="/">ホーム</a>
@@ -20,21 +21,23 @@
             </ul>
         </nav>
 
-        <h1>固定カット処理アプリ</h1>
-        <div class="heder">
+        <h1 class="pad">固定カット処理アプリ</h1>
+        <div class="heder pad">
             {% block header %}{% endblock %}
         </div>
 
-        <div>
+        <div class="pad">
             {% block serchbar %}{% endblock %}
         </div>
 
-        <p>{% block content %}{% endblock %}</p>
+        <div class="pad">
+            {% block content %}{% endblock %}
+        </div>
         
         <div class=serch_result>
             {% block serch_result %}{% endblock %}
         </div>
-        <div class="footer">
+        <div class="footer pad">
             {% block footer %}{% endblock %}
         </div>
         
