@@ -1,3 +1,15 @@
 .pad {
     padding-left: 30px;
 }
+
+.pad-above {
+    padding-top: 30px;
+}
+
+.not-solve {
+    color: red;
+}
+
+.solve {
+    color: green;
+}
