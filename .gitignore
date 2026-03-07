@@ -1,0 +1,10 @@
+# データ用のファイルは要らない
+*.xlsx
+*.csv
+*.db
+*.log
+*.txt
+*.jpeg
+*.jpg
+*.eps
+*.svg
