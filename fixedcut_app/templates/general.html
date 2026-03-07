@@ -18,41 +18,53 @@ GeneralHeader
         <ul class="navbar-nav">
             <li class="nav-item">
                 <label for="ID">固定カットID:</label>
-                <input name="ID" type="text" class="form-control" id="ID">
+                <input name="ID" type="text" class="form-control" id="ID" value="{{ savelist[1] }}">
             </li>
             <li class="nav-item">
                 <label for="midashi">仮見出し:</label>
-                <input name="midashi" type="text" class="form-control" id="midashi">
+                <input name="midashi" type="text" class="form-control" id="midashi" value="{{ savelist[0] }}">
             </li>
             <li class="nav-item">
                 <label for="Str">一体化時文字列:</label>
-                <input name="Str" type="text" class="form-control" id="Str">
+                <input name="Str" type="text" class="form-control" id="Str" value="{{ savelist[2] }}">
             </li>
             <li class="nav-item pad">
                 <label for="GWFlg">ＧＷ登録済み:</label>
                 <br>
+                {% if savelist[3]=="on" %}
+                <input name="GWFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1" checked>
+                {% else %}
                 <input name="GWFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1">
+                {% endif %}
             </li>
             <li class="nav-item pad">
                 <label for="prodFlg">組版本番登録済み:</label>
                 <br>
+                {% if savelist[4]=="on" %}
+                <input name="prodFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1" checked>
+                {% else %}
                 <input name="prodFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1">
+                {% endif %}
             </li>
             <li class="nav-item pad">
                 <label for="OTFlg">組版ＯＴ登録済み:</label>
                 <br>
+                {% if savelist[5]=="on" %}
+                <input name="OTFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1" checked>
+                {% else %}
                 <input name="OTFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1">
+                {% endif %}
             </li>
             <li class="nav-item pad">
                 <label for="startdate">開始日時:</label>
-                <input name="startdate" type="date" class="form-control" id="startdate">
+                <input name="startdate" type="date" class="form-control" id="startdate" value="{{ savelist[6] }}">
             </li>
             <li class="nav-item pad-above">
                 <h4>～</h4>
             </li>
             <li class="nav-item ">
                 <label for="enddate">終了日時:</label>
-                <input name="enddate" type="date" class="form-control" id="enddate">
+                <input name="enddate" type="date" class="form-control" id="enddate" value="{{ savelist[7] }}">
             </li>
             <li class="nav-item pad pad-above">
                 <button type="submit" class="btn btn-primary">検索</button>
@@ -90,53 +102,50 @@ GeneralHeader
             <th>更新日時</th>
         </tr>
         {% for res in results %}
-        <a href='general_detail/{{res.ID}}'>
-            <tr>
-                <td>
-                    <button type="submit" class="btn btn-primary">編集</button>
-                </td>
-                <td>{{ res.id }}</td>
-                <td>{{ res.midashi }}</td>
-                <td>{{ res.Str }}</td>
-                <td>
-                    {% if ".eps" in res.colorUrl %}
-                    <a href="{{ res.colorUrl }}" download="カラー画像.eps">ダウンロード</a></td>
-                    {% elif ".jpg" in res.colorUrl %}
-                    <img href="{{ url_for('static', filename=res.colorUrl) }}">
-                    {% elif ".jpeg" in res.colorUrl %}
-                    <img href="{{ res.colorUrl }}" height="50">
-                    {% elif ".svg" in res.colorUrl %}
-                    <img href="{{ res.colorUrl }}" height="50">
-                    {% else %}
-                    <p>なし</p>
-                    {% endif %}
-                <td>
-                    {% if ".eps" in res.monoUrl %}
-                    <a href="{{ res.monoUrl }}" download="モノクロ画像.eps">ダウンロード</a>
-                    {% elif ".jpg" in res.monoUrl %}
-                    <img href="{{ res.monoUrl }}" height="50">
-                    {% elif ".jpeg" in res.monoUrl %}
-                    <img href="{{ res.monoUrl }}" height="50">
-                    {% elif ".svg" in res.monoUrl %}
-                    <img href="{{ res.monoUrl }}" height="50">
-                    {% else %}
-                    <p>なし</p>
-                    {% endif %}
-                </td>
-                <td>{{ res.GWFlg }}</td>
-                <td>{{ res.prodFlg }}</td>
-                <td>{{ res.OTFlg }}</td>
-                <td>{{ res.comment }}</td>
-                <td>{{ res.created_at }}</td>
-                <td>{{ res.updated_at }}</td>
-            </tr>
-        </a>
+        <tr>
+            <td>
+                <button type="submit" class="btn btn-primary">編集</button>
+            </td>
+            <td>{{ res.id }}</td>
+            <td>{{ res.midashi }}</td>
+            <td>{{ res.Str }}</td>
+            <td>
+                {% if ".eps" in res.colorUrl %}
+                <a href="/download/static/{{ res.colorUrl }}">ダウンロード</a></td>
+                {% elif ".jpg" in res.colorUrl %}
+                <img src="{{ url_for('static', filename=res.colorUrl) }}" height="50" alt="">
+                {% elif ".jpeg" in res.colorUrl %}
+                <img src="{{ url_for('static', filename=res.colorUrl) }}" height="50" alt="">
+                {% elif ".svg" in res.colorUrl %}
+                <img src="{{ url_for('static', filename=res.colorUrl) }}" height="50" alt="">
+                {% else %}
+                <p>なし</p>
+                {% endif %}
+            <td>
+                {% if ".eps" in res.monoUrl %}
+                <a href="{{ res.monoUrl }}" download="モノクロ画像.eps">ダウンロード</a>
+                {% elif ".jpg" in res.monoUrl %}
+                <img src="{{ url_for('static', filename=res.monoUrl) }}" height="50" alt="">
+                {% elif ".jpeg" in res.monoUrl %}
+                <img src="{{ url_for('static', filename=res.monoUrl) }}" height="50" alt="">
+                {% elif ".svg" in res.monoUrl %}
+                <img src="{{ url_for('static', filename=res.monoUrl) }}" height="50" alt="">
+                {% else %}
+                <p>なし</p>
+                {% endif %}
+            </td>
+            <td>{{ res.GWFlg }}</td>
+            <td>{{ res.prodFlg }}</td>
+            <td>{{ res.OTFlg }}</td>
+            <td>{{ res.comment }}</td>
+            <td>{{ res.created_at }}</td>
+            <td>{{ res.updated_at }}</td>
+        </tr>
          {% endfor %}
     </table>
-    <a href='general'>back<a>
 </div>
 {% endblock %}
 
 {% block footer %}
-<a href="/">もどる</a>
+<a href="/">トップページに戻る</a>
 {% endblock %}

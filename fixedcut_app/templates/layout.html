@@ -38,6 +38,18 @@
             {% block content %}{% endblock %}
         </div>
         
+        <dev>
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <ul>
+                {% for message in messages %}
+                <li><h2 class=not-solve>{{ message }}</h2></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% endwith %}
+        </div>
+
         <div class=serch_result>
             {% block serch_result %}{% endblock %}
         </div>

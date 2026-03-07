@@ -1,8 +1,8 @@
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, flash, send_from_directory, send_file
 from datetime import datetime
 from fixedcut_app import app, db
 from fixedcut_app.models.fixedcut import FixedCut
-import os, pathlib
+import os, pathlib, sqlite3
 import aspose.pdf as apdf
 from sqlalchemy import and_
 
@@ -28,10 +28,11 @@ def senkyo_serch():
 @app.route('/general', methods=['GET', 'POST'])
 def general():
     if request.method == 'GET':
-        return render_template('general.html', name='General page')
+        results = db.session.query(FixedCut).all()
+        savelist = ["","","","","","","",""]
+        return render_template('general.html', name='General page', results=results, savelist=savelist)
     
     if request.method == 'POST':
-        #results = []
         print("データを受け取りました")
         res = {}
         res["midashi"] = request.form.get("midashi")
@@ -43,7 +44,15 @@ def general():
         res["startdate"] = request.form.get("startdate")
         res["enddate"] = request.form.get("enddate")
 
-        
+        savelist = [res["midashi"],
+                    res["ID"],
+                    res["Str"],
+                    res["GWFlg"],
+                    res["prodFlg"],
+                    res["OTFlg"],
+                    res["startdate"],
+                    res["enddate"]]
+
         if res["GWFlg"] == "on":
             res.update(GWFlg=True)
         else:
@@ -77,14 +86,16 @@ def general():
 
 
         print(f"results:{results}")
+        print(type(results[0]))
 
-        return render_template('general.html', results=results) 
+        return render_template('general.html', results=results, savelist=savelist) 
 
 
 @app.route('/general_add', methods=['GET', 'POST'])
 def general_add():
     if request.method == 'GET':
-        return render_template('general_add.html')
+        savelist=["","","","","","","","",""]
+        return render_template('general_add.html', savelist=savelist)
     
     if request.method == 'POST':
         form_id = request.form.get("id")
@@ -96,6 +107,18 @@ def general_add():
         form_prodFlg = request.form.get("prodFlg")
         form_OTFlg = request.form.get("OTFlg")
         form_comment = request.form.get("comment")
+
+        savelist = [form_id,
+                    form_midashi,
+                    form_Str,
+                    form_colorUrl,
+                    form_monoUrl,
+                    form_GWFlg,
+                    form_prodFlg,
+                    form_OTFlg,
+                    form_comment
+                    ]
+        print(f"form_GWFlg:{form_GWFlg}")
 
         bool_list = [form_GWFlg, form_prodFlg, form_OTFlg]
         bool_res = []
@@ -134,30 +157,49 @@ def general_add():
             form_monoUrl.save(mono_path)
         except(PermissionError):
             pass
-    
-        fixedcut = FixedCut(
-            id = form_id, #固定カットID
-            midashi = form_midashi, #仮見出し
-            Str = form_Str, #一体化時文字列
-            colorUrl = f'/static/img/{form_id}/color/{color_name}', #カラー画像のURL
-            monoUrl = f'/static/img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
-            GWFlg = bool_res[0], #GW登録対象
-            prodFlg = bool_res[1], #組版本番登録済みか
-            OTFlg = bool_res[2], #組版OT系登録済みか
-            comment = form_comment, #コメント
-        )
-        db.session.add(fixedcut)
-        db.session.commit()
+
+
+        try:
+            fixedcut = FixedCut(
+                id = form_id, #固定カットID
+                midashi = form_midashi, #仮見出し
+                Str = form_Str, #一体化時文字列
+                colorUrl = f'img/{form_id}/color/{color_name}', #カラー画像のURL
+                monoUrl = f'img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
+                GWFlg = bool_res[0], #GW登録対象
+                prodFlg = bool_res[1], #組版本番登録済みか
+                OTFlg = bool_res[2], #組版OT系登録済みか
+                comment = form_comment, #コメント
+                )
+            db.session.add(fixedcut)
+            db.session.commit()
+            flash(f"{form_id}をレコード追加しました！")
+        except Exception as e:
+            print(print("例外args:", e.args))
+            if form_id == "":
+                flash("※固定カットIDが入力されていません※")
+                flash("固定カットIDを入力してレコード追加してください")
+            else:
+                flash("※すでに登録済みの固定カットIDです※")
+                flash("固定カットIDを変更してレコード追加してください")
+
         del bool_list
         del bool_res
-        return render_template('general_add.html')
+        return render_template('general_add.html', savelist=savelist)
 
 @app.route('/general_detail')
 def general_detail():
     return render_template('general_detail.html')
 
 
-def allwed_file(filename):
-    # .があるかどうかのチェックと、拡張子の確認
-    # OKなら１、だめなら0
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+@app.route('/download/<string:file>')
+def download(file):
+    print(file)
+    #C:\Users\tani.yutaro\fixedcut_flask\fixedcut_app\templates\static\img\eeee\color\カラー地図_20240815_福島民友研修Ａ_小組.eps
+    return send_from_directory('fixedcut_app/templates/static/img/eeee/color', 'カラー地図_20240815_福島民友研修Ａ_小組.eps', as_attachment=True)
+
+
+@app.errorhandler(404)
+def not_found(error):
+    flash(error)
+    return render_template("error_404.html"), 404
