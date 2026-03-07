@@ -18,7 +18,7 @@
     <form action="/general_add" method="POST" enctype="multipart/form-data">
         <table class="table table-striped table-hover">
             <tr>
-                <th width="100">操作</th>
+                <th>操作</th>
                 <th>固定カットID</th>
                 <th>仮見出し</th>
                 <th>一体化時文字列</th>
@@ -30,34 +30,34 @@
                 <th>備考</th>
             </tr>
             <tr>
-                <td width="100"><button type="submit" class="btn btn-primary" width="100">追加</button></td>
-                <td><input name="id" type="text" value="{{ savelist[0] }}"></input></td>
-                <td><input name="midashi" type="text" value="{{ savelist[1] }}"></input></td>
-                <td><input name="Str" type="text" value="{{ savelist[2] }}"></input></td>
-                <td><input type="file" name="colorUrl" accept=".eps, .jpg, .jpeg, .svg" value="{{ savelist[3] }}"/></td>
-                <td><input type="file" name="monoUrl" accept=".eps, .jpg, .jpeg, .svg" value="{{ savelist[4] }}"/></td>
-                <td>
+                <td class=table-data><button type="submit" class="btn btn-primary" width="100">追加</button></td>
+                <td class=table-data><input name="id" type="text" value="{{ savelist[0] }}"></input></td>
+                <td class=table-data><input name="midashi" type="text" value="{{ savelist[1] }}"></input></td>
+                <td class=table-data><input name="Str" type="text" value="{{ savelist[2] }}"></input></td>
+                <td class=table-data><input type="file" name="colorUrl" accept=".eps, .jpg, .jpeg, .svg" value="{{ savelist[3] }}"/></td>
+                <td class=table-data><input type="file" name="monoUrl" accept=".eps, .jpg, .jpeg, .svg" value="{{ savelist[4] }}"/></td>
+                <td class=table-data>
                     {% if savelist[5]=="on" %}
                     <input name="GWFlg" type="checkbox" checked></input>
                     {% else %}
                     <input name="GWFlg" type="checkbox"></input>
                     {% endif %}
                 </td>
-                <td>
+                <td class=table-data>
                     {% if savelist[6]=="on" %}
                     <input name="prodFlg" type="checkbox" checked></input>
                     {% else %}
                     <input name="prodFlg" type="checkbox"></input>
                     {% endif %}
                 </td>
-                <td>
+                <td class=table-data>
                     {% if savelist[7]=="on" %}
                     <input name="OTFlg" type="checkbox" checked></input>
                     {% else %}
                     <input name="OTFlg" type="checkbox"></input>
                     {% endif %}
                 </td>
-                <td><input name="comment" type="text" value="{{ savelist[8] }}"></input></td>
+                <td class=table-data><input name="comment" type="text" value="{{ savelist[8] }}"></input></td>
             </tr>
         </table>
     </form>

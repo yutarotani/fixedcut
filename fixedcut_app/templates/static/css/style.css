@@ -13,3 +13,10 @@
 .solve {
     color: green;
 }
+
+.table-data {
+    height: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}

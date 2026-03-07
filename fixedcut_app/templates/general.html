@@ -103,13 +103,13 @@ GeneralHeader
         </tr>
         {% for res in results %}
         <tr>
-            <td>
-                <button type="submit" class="btn btn-primary">編集</button>
+            <td class=table-data>
+                <button onclick="location.href='general_detail/{{ res.id }}'" class="btn btn-primary">編集</button>
             </td>
-            <td>{{ res.id }}</td>
-            <td>{{ res.midashi }}</td>
-            <td>{{ res.Str }}</td>
-            <td>
+            <td class=table-data>{{ res.id }}</td>
+            <td class=table-data>{{ res.midashi }}</td>
+            <td class=table-data>{{ res.Str }}</td>
+            <td class=table-data>
                 {% if ".eps" in res.colorUrl %}
                 <a href="/download/static/{{ res.colorUrl }}">ダウンロード</a></td>
                 {% elif ".jpg" in res.colorUrl %}
@@ -121,7 +121,7 @@ GeneralHeader
                 {% else %}
                 <p>なし</p>
                 {% endif %}
-            <td>
+            <td class=table-data>
                 {% if ".eps" in res.monoUrl %}
                 <a href="{{ res.monoUrl }}" download="モノクロ画像.eps">ダウンロード</a>
                 {% elif ".jpg" in res.monoUrl %}
@@ -134,12 +134,12 @@ GeneralHeader
                 <p>なし</p>
                 {% endif %}
             </td>
-            <td>{{ res.GWFlg }}</td>
-            <td>{{ res.prodFlg }}</td>
-            <td>{{ res.OTFlg }}</td>
-            <td>{{ res.comment }}</td>
-            <td>{{ res.created_at }}</td>
-            <td>{{ res.updated_at }}</td>
+            <td class=table-data>{{ res.GWFlg }}</td>
+            <td class=table-data>{{ res.prodFlg }}</td>
+            <td class=table-data>{{ res.OTFlg }}</td>
+            <td class=table-data>{{ res.comment }}</td>
+            <td class=table-data>{{ res.created_at }}</td>
+            <td class=table-data>{{ res.updated_at }}</td>
         </tr>
          {% endfor %}
     </table>

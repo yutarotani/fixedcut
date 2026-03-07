@@ -3,7 +3,7 @@ from datetime import datetime
 from fixedcut_app import app, db
 from fixedcut_app.models.fixedcut import FixedCut
 import os, pathlib, sqlite3
-from sqlalchemy import and_, _or
+from sqlalchemy import and_
 
 
 @app.route('/')
@@ -174,9 +174,14 @@ def general_add():
         del bool_res
         return render_template('general_add.html', savelist=savelist)
 
-@app.route('/general_detail')
-def general_detail():
-    return render_template('general_detail.html')
+
+@app.route('/general_detail/<string:id>', methods=['GET', 'POST'])
+def general_detail(id):
+    if request.method == 'GET':
+        results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
+        print(results[0].GWFlg)
+        return render_template('general_detail.html', results=results)
+
 
 
 @app.route('/download/<string:file>')
