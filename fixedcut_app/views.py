@@ -3,8 +3,7 @@ from datetime import datetime
 from fixedcut_app import app, db
 from fixedcut_app.models.fixedcut import FixedCut
 import os, pathlib, sqlite3
-import aspose.pdf as apdf
-from sqlalchemy import and_
+from sqlalchemy import and_, _or
 
 
 @app.route('/')
@@ -44,14 +43,9 @@ def general():
         res["startdate"] = request.form.get("startdate")
         res["enddate"] = request.form.get("enddate")
 
-        savelist = [res["midashi"],
-                    res["ID"],
-                    res["Str"],
-                    res["GWFlg"],
-                    res["prodFlg"],
-                    res["OTFlg"],
-                    res["startdate"],
-                    res["enddate"]]
+        savelist = [res["midashi"], res["ID"], res["Str"],
+                    res["GWFlg"], res["prodFlg"], res["OTFlg"],
+                    res["startdate"], res["enddate"]]
 
         if res["GWFlg"] == "on":
             res.update(GWFlg=True)
@@ -108,16 +102,9 @@ def general_add():
         form_OTFlg = request.form.get("OTFlg")
         form_comment = request.form.get("comment")
 
-        savelist = [form_id,
-                    form_midashi,
-                    form_Str,
-                    form_colorUrl,
-                    form_monoUrl,
-                    form_GWFlg,
-                    form_prodFlg,
-                    form_OTFlg,
-                    form_comment
-                    ]
+        savelist = [form_id, form_midashi, form_Str, form_colorUrl, form_monoUrl,
+                    form_GWFlg, form_prodFlg, form_OTFlg,form_comment]
+
         print(f"form_GWFlg:{form_GWFlg}")
 
         bool_list = [form_GWFlg, form_prodFlg, form_OTFlg]
