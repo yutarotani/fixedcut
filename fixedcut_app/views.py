@@ -161,14 +161,17 @@ def general_add():
             db.session.add(fixedcut)
             db.session.commit()
             flash(f"{form_id}をレコード追加しました！")
+            app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
         except Exception as e:
             print(print("例外args:", e.args))
             if form_id == "":
                 flash("※固定カットIDが入力されていません※")
                 flash("固定カットIDを入力してレコード追加してください")
+                app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
             else:
                 flash("※すでに登録済みの固定カットIDです※")
                 flash("固定カットIDを変更してレコード追加してください")
+                app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
 
         del bool_list
         del bool_res
@@ -184,14 +187,27 @@ def general_detail(id):
 
 
 
-@app.route('/download/<string:file>')
-def download(file):
-    print(file)
-    #C:\Users\tani.yutaro\fixedcut_flask\fixedcut_app\templates\static\img\eeee\color\カラー地図_20240815_福島民友研修Ａ_小組.eps
-    return send_from_directory('fixedcut_app/templates/static/img/eeee/color', 'カラー地図_20240815_福島民友研修Ａ_小組.eps', as_attachment=True)
+@app.route('/download/<path:filename>')
+def download(filename):
+    """
+    filename には 'img/eeee/color/xxx.eps' のような
+    static に対する相対パスが渡ってくる想定。
+    """
+    # セキュリティのためにパスが static_folder の外に出ないか
+    # 必要なら検証を入れる（省略可）
 
+    return send_from_directory(
+        app.static_folder,      # __init__.py で static_folder='./templates/static' に設定済
+        filename,
+        as_attachment=True
+    )
 
 @app.errorhandler(404)
 def not_found(error):
     flash(error)
     return render_template("error_404.html"), 404
+
+
+@app.before_request
+def log_request():
+    app.logger.info("Request: %s %s from %s", request.method, request.path, request.remote_addr)

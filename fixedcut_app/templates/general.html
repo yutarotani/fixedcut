@@ -111,7 +111,7 @@ GeneralHeader
             <td class=table-data>{{ res.Str }}</td>
             <td class=table-data>
                 {% if ".eps" in res.colorUrl %}
-                <a href="/download/static/{{ res.colorUrl }}">ダウンロード</a></td>
+                <a href="{{ url_for('download', filename=res.colorUrl) }}">ダウンロード</a></td>
                 {% elif ".jpg" in res.colorUrl %}
                 <img src="{{ url_for('static', filename=res.colorUrl) }}" height="50" alt="">
                 {% elif ".jpeg" in res.colorUrl %}
@@ -123,7 +123,7 @@ GeneralHeader
                 {% endif %}
             <td class=table-data>
                 {% if ".eps" in res.monoUrl %}
-                <a href="{{ res.monoUrl }}" download="モノクロ画像.eps">ダウンロード</a>
+                <a href="{{ url_for('download', filename=res.monoUrl) }}" download="モノクロ画像.eps">ダウンロード</a>
                 {% elif ".jpg" in res.monoUrl %}
                 <img src="{{ url_for('static', filename=res.monoUrl) }}" height="50" alt="">
                 {% elif ".jpeg" in res.monoUrl %}
