@@ -15,11 +15,11 @@ general_serch
 {% block serchbar %}
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <form class="form-group" action="senkyo-serch" method="POST">
+    <form class="form-group" onsubmit="searchById(event)">
         <ul class="navbar-nav">
             <li class="nav-item">
                 <label for="ID">固定カットID:</label>
-                <input name="ID" type="ID" class="form-control" id="ID">
+                <input name="ID" type="text" class="form-control" id="ID">
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="#">about</a>
@@ -30,6 +30,33 @@ general_serch
         </ul>
     </form>
 </nav>
+
+<script>
+    function searchById(event) {
+        event.preventDefault();
+        const id = document.getElementById('ID').value.trim();
+        if (!id) {
+            alert('固定カットIDを入力してください');
+            return;
+        }
+
+        // IDの存在確認
+        fetch('/api/check_id/' + encodeURIComponent(id))
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    window.location.href = '/general_detail/' + encodeURIComponent(id);
+                } else {
+                    alert('指定されたIDが見つかりません。\n正しいIDを入力してください。');
+                    document.getElementById('ID').focus();
+                }
+            })
+            .catch(error => {
+                console.error('エラー:', error);
+                alert('IDの確認中にエラーが発生しました');
+            });
+    }
+</script>
 {% endblock %}
 
 {% block serch_result %}

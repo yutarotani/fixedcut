@@ -183,7 +183,9 @@ def general_add():
 @app.route('/general_detail/<string:id>', methods=['GET', 'POST'])
 def general_detail(id):
     if request.method == 'GET':
-        results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
+        results = db.session.query(FixedCut).filter(FixedCut.id == id).all()
+        if not results:
+            return render_template('error_404.html'), 404
         print(results[0].GWFlg)
         return render_template('general_detail.html', results=results)
     
@@ -201,7 +203,7 @@ def general_detail(id):
             fixedcut = db.session.query(FixedCut).filter(FixedCut.id == id).first()
             if not fixedcut:
                 flash("※指定されたレコードが見つかりません※")
-                results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
+                results = db.session.query(FixedCut).filter(FixedCut.id == id).all()
                 return render_template('general_detail.html', results=results)
 
             # レコード更新（ID以外）
@@ -226,7 +228,7 @@ def general_detail(id):
             app.logger.warning("Failed to update record id=%s by %s", id, request.remote_addr)
 
         # 更新後のデータを再取得して表示
-        results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
+        results = db.session.query(FixedCut).filter(FixedCut.id == id).all()
         return render_template('general_detail.html', results=results)
 
 
@@ -325,6 +327,18 @@ def download(filename):
 def not_found(error):
     flash(error)
     return render_template("error_404.html"), 404
+
+
+@app.route('/api/check_id/<string:id>')
+def check_id(id):
+    """
+    IDが存在するかチェックするAPI
+    """
+    record = db.session.query(FixedCut).filter(FixedCut.id == id).first()
+    if record:
+        return {'exists': True}
+    else:
+        return {'exists': False}
 
 
 @app.before_request
