@@ -25,216 +25,159 @@ def senkyo_serch():
 
 
 @app.route('/general', methods=['GET', 'POST'])
-def general():
-    if request.method == 'GET':
-        results = db.session.query(FixedCut).all()
-        savelist = ["","","","","","","",""]
-        return render_template('general.html', name='General page', results=results, savelist=savelist)
+@app.route('/general/<int:page>', methods=['GET', 'POST'])
+def general(page=1):
+    per_page = 100
     
-    if request.method == 'POST':
-        print("データを受け取りました")
-        res = {}
-        res["midashi"] = request.form.get("midashi")
-        res["ID"]  = request.form.get("ID")
-        res["Str"]  = request.form.get("Str")
-        res["GWFlg"]  = request.form.get("GWFlg")
-        res["prodFlg"]  = request.form.get("prodFlg")
-        res["OTFlg"]  = request.form.get("OTFlg")
-        res["startdate"] = request.form.get("startdate")
-        res["enddate"] = request.form.get("enddate")
+    # 検索条件を取得（POSTまたはGETパラメータから）
+    res = {}
+    res["midashi"] = request.values.get("midashi", "")
+    res["ID"] = request.values.get("ID", "")
+    res["Str"] = request.values.get("Str", "")
+    res["GWFlg"] = request.values.get("GWFlg", "")
+    res["prodFlg"] = request.values.get("prodFlg", "")
+    res["OTFlg"] = request.values.get("OTFlg", "")
+    res["startdate"] = request.values.get("startdate", "")
+    res["enddate"] = request.values.get("enddate", "")
 
-        savelist = [res["midashi"], res["ID"], res["Str"],
-                    res["GWFlg"], res["prodFlg"], res["OTFlg"],
-                    res["startdate"], res["enddate"]]
+    savelist = [res["midashi"], res["ID"], res["Str"],
+                res["GWFlg"], res["prodFlg"], res["OTFlg"],
+                res["startdate"], res["enddate"]]
 
-        if res["GWFlg"] == "on":
-            res.update(GWFlg=True)
-        else:
-            res.update(GWFlg=False)
-
-        if res["prodFlg"] == "on":
-            res.update(prodFlg=True)
-        else:
-            res.update(prodFlg=False)
-
-        if res["OTFlg"] == "on":
-            res.update(OTFlg=True)
-        else:
-            res.update(OTFlg=False)
-        
-        print(f"res:{res}")
-        print(res["ID"])
-
-        if res['midashi']=='' and res['ID']=='' and res['Str']=='' and res['GWFlg']==False and res['prodFlg']==False and res['OTFlg']==False and res['startdate']=='' and res['enddate']=='':
-            results = db.session.query(FixedCut).all()
-        else:
-            results = db.session.query(FixedCut).filter(FixedCut.id.contains(res["ID"])).all()
-            #results = result.
-             #   FixedCut.id.contains(res["ID"]),
-             #   FixedCut.Str.contains(res["Str"])#,
-                #FixedCut.GWFlg == res["GWFlg"],
-                #FixedCut.prodFlg == res["prodFlg"],
-                #FixedCut.OTFlg == res["OTFlg"]
-              #  )
-               # ).all()
-
-
-        print(f"results:{results}")
-        print(type(results[0]))
-
-        return render_template('general.html', results=results, savelist=savelist) 
+    # クエリ構築
+    query = db.session.query(FixedCut)
+    
+    # AND検索：固定カットID、仮見出し、一体化文字列
+    if res["ID"]:
+        query = query.filter(FixedCut.id.contains(res["ID"]))
+    if res["midashi"]:
+        query = query.filter(FixedCut.midashi.contains(res["midashi"]))
+    if res["Str"]:
+        query = query.filter(FixedCut.Str.contains(res["Str"]))
+    
+    # 追加フィルタ：GWFlg, prodFlg, OTFlg, startdate, enddate
+    if res["GWFlg"] == "on":
+        query = query.filter(FixedCut.GWFlg == True)
+    if res["prodFlg"] == "on":
+        query = query.filter(FixedCut.prodFlg == True)
+    if res["OTFlg"] == "on":
+        query = query.filter(FixedCut.OTFlg == True)
+    if res["startdate"]:
+        start_date = datetime.strptime(res["startdate"], '%Y-%m-%d')
+        query = query.filter(FixedCut.created_at >= start_date)
+    if res["enddate"]:
+        end_date = datetime.strptime(res["enddate"], '%Y-%m-%d')
+        query = query.filter(FixedCut.created_at <= end_date)
+    
+    # ページネーション適用
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    results = pagination.items
+    
+    return render_template('general.html', name='General page', results=results, savelist=savelist, pagination=pagination) 
 
 
 @app.route('/general_add', methods=['GET', 'POST'])
 def general_add():
     if request.method == 'GET':
-        savelist=["","","","","","","","",""]
+        savelist = ["","","","","","","","",""]
         return render_template('general_add.html', savelist=savelist)
     
-    if request.method == 'POST':
-        form_id = request.form.get("id")
-        form_midashi = request.form.get("midashi")
-        form_Str = request.form.get("Str")
-        form_colorUrl = request.files.get("colorUrl")
-        form_monoUrl = request.files.get("monoUrl")
-        form_GWFlg = request.form.get("GWFlg")
-        form_prodFlg = request.form.get("prodFlg")
-        form_OTFlg = request.form.get("OTFlg")
-        form_comment = request.form.get("comment")
+    # フォームデータを取得
+    form_id = request.form.get("id")
+    form_midashi = request.form.get("midashi")
+    form_Str = request.form.get("Str")
+    form_colorUrl = request.files.get("colorUrl")
+    form_monoUrl = request.files.get("monoUrl")
+    form_GWFlg = request.form.get("GWFlg") == "on"
+    form_prodFlg = request.form.get("prodFlg") == "on"
+    form_OTFlg = request.form.get("OTFlg") == "on"
+    form_comment = request.form.get("comment")
 
-        savelist = [form_id, form_midashi, form_Str, form_colorUrl, form_monoUrl,
-                    form_GWFlg, form_prodFlg, form_OTFlg,form_comment]
+    savelist = [form_id, form_midashi, form_Str, form_colorUrl, form_monoUrl,
+                form_GWFlg, form_prodFlg, form_OTFlg, form_comment]
 
+    # 許可する拡張子
+    ALLOWED_EXTENSIONS = {".eps", ".jpg", ".jpeg", ".svg"}
 
-        bool_list = [form_GWFlg, form_prodFlg, form_OTFlg]
-        bool_res = []
-        for item in bool_list:
-            if item == "on":
-                bool_res.append(True)
-            else:
-                bool_res.append(False)
+    # 拡張子チェック関数
+    def is_valid_file(file):
+        if not file or file.filename == "":
+            return True  # ファイルなしはOK
+        ext = pathlib.Path(file.filename).suffix.lower()
+        return ext in ALLOWED_EXTENSIONS
 
-        try:
-            os.makedirs(f'fixedcut_app/templates/static/img/{form_id}/color')
-        except(FileExistsError):
-            pass
-            
-        try: 
-            os.makedirs(f'fixedcut_app/templates/static/img/{form_id}/mono')
-        except(FileExistsError):
-            pass
+    # 拡張子検証
+    color_valid = is_valid_file(form_colorUrl)
+    mono_valid = is_valid_file(form_monoUrl)
+
+    # 無効な拡張子の場合、エラーメッセージを表示して終了
+    if not color_valid or not mono_valid:
+        flash("※画像ファイルが登録対象外の拡張子です※")
+        flash('".eps", ".jpg", ".jpeg", ".svg"のみが登録できます')
         
-        color_name = form_colorUrl.filename
-        mono_name = form_monoUrl.filename
-
-        color_path = pathlib.Path(f'fixedcut_app/templates/static/img/{form_id}/color', color_name)
-        mono_path = pathlib.Path(f'fixedcut_app/templates/static/img/{form_id}/mono', mono_name)
-
-        try:
-            form_colorUrl.save(color_path)
-        except(PermissionError):
-            pass
+        if form_colorUrl and form_colorUrl.filename and not color_valid:
+            flash(f"カラー画像ファイル：{form_colorUrl.filename}")
+        if form_monoUrl and form_monoUrl.filename and not mono_valid:
+            flash(f"モノクロ画像ファイル：{form_monoUrl.filename}")
         
-        try:
-            form_monoUrl.save(mono_path)
-        except(PermissionError):
-            pass
-
-        filetypes = [".eps",".jpg",".jpeg",".svg"]
-        if any(filetype in form_colorUrl.filename for filetype in filetypes) or any(filetype in form_monoUrl.filename for filetype in filetypes):
-            try:
-                fixedcut = FixedCut(
-                    id = form_id, #固定カットID
-                    midashi = form_midashi, #仮見出し
-                    Str = form_Str, #一体化時文字列
-                    colorUrl = f'img/{form_id}/color/{color_name}', #カラー画像のURL
-                    monoUrl = f'img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
-                    GWFlg = bool_res[0], #GW登録対象
-                    prodFlg = bool_res[1], #組版本番登録済みか
-                    OTFlg = bool_res[2], #組版OT系登録済みか
-                    comment = form_comment, #コメント
-                    )
-                db.session.add(fixedcut)
-                db.session.commit()
-                flash(f"{form_id}をレコード追加しました！")
-                app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
-                del bool_list
-                del bool_res
-                return render_template('general_add.html', savelist=savelist)
-            except Exception as e:
-                print(print("例外args:", e.args))
-                if form_id == "":
-                    flash("※固定カットIDが入力されていません※")
-                    flash("固定カットIDを入力してレコード追加してください")
-                    app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
-                    del bool_list
-                    del bool_res
-                    return render_template('general_add.html', savelist=savelist)
-                else:
-                    flash("※すでに登録済みの固定カットIDです※")
-                    flash("固定カットIDを変更してレコード追加してください")
-                    app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
-                    del bool_list
-                    del bool_res
-                    return render_template('general_add.html', savelist=savelist)
-        else:
-            
-            if not any(filetype in form_colorUrl.filename for filetype in filetypes) and not any(filetype in form_monoUrl.filename for filetype in filetypes):
-                if form_colorUrl.filename == "" and form_monoUrl.filename != "":
-                    flash("※画像ファイルが登録対象外の拡張子です※")
-                    flash('".eps",".jpg",".jpeg",".svg"のみが登録できます')
-                    flash(f"対象ファイルは以下です")
-                    flash(f"モノクロ画像ファイル：{form_monoUrl.filename}")
-                elif form_colorUrl.filename != "" and form_monoUrl.filename == "":
-                    flash("※画像ファイルが登録対象外の拡張子です※")
-                    flash('".eps",".jpg",".jpeg",".svg"のみが登録できます')
-                    flash(f"対象ファイルは以下です")
-                    flash(f"カラー画像ファイル　：{form_colorUrl.filename}")
-                elif form_colorUrl.filename == "" and form_monoUrl.filename == "":
-                    flash(f"登録対象画像がない状態でレコード登録を試みます")
-                    flash("↓")
-
-                    try:
-                        fixedcut = FixedCut(id = form_id, #固定カットID
-                                            midashi = form_midashi, #仮見出し
-                                            Str = form_Str, #一体化時文字列
-                                            colorUrl = f'img/{form_id}/color/{color_name}', #カラー画像のURL
-                                            monoUrl = f'img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
-                                            GWFlg = bool_res[0], #GW登録対象
-                                            prodFlg = bool_res[1], #組版本番登録済みか
-                                            OTFlg = bool_res[2], #組版OT系登録済みか
-                                            comment = form_comment, #コメント
-                                            )
-                        db.session.add(fixedcut)
-                        db.session.commit()
-                        shutil.rmtree(f'fixedcut_app/templates/static/img/{form_id}/')
-                        flash(f"{form_id}をレコード追加しました！")
-                        app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
-                        del bool_list
-                        del bool_res
-                        return render_template('general_add.html', savelist=savelist)
-                    except Exception as e:
-                        print(print("例外args:", e.args))
-                        if form_id == "":
-                            flash("※固定カットIDが入力されていません※")
-                            flash("固定カットIDを入力してレコード追加してください")
-                        else:
-                            flash("※すでに登録済みの固定カットIDです※")
-                            flash("固定カットIDを変更してレコード追加してください")
-                else:
-                    flash(f"対象ファイルは以下です")
-                    flash("※画像ファイルが登録対象外の拡張子です※")
-                    flash('".eps",".jpg",".jpeg",".svg"のみが登録できます')
-                    flash(f"カラー画像ファイル　：{form_colorUrl.filename}")
-                    flash(f"モノクロ画像ファイル：{form_monoUrl.filename}")
-
-            shutil.rmtree(f'fixedcut_app/templates/static/img/{form_id}/')
-            app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
-
-
-        del bool_list
-        del bool_res
+        app.logger.warning("Invalid file extension attempt by %s", request.remote_addr)
         return render_template('general_add.html', savelist=savelist)
+
+    # ここから先は有効な拡張子のみ
+    try:
+        # ディレクトリ作成
+        os.makedirs(f'fixedcut_app/templates/static/img/{form_id}/color', exist_ok=True)
+        os.makedirs(f'fixedcut_app/templates/static/img/{form_id}/mono', exist_ok=True)
+
+        # ファイル保存
+        color_name = form_colorUrl.filename if form_colorUrl and form_colorUrl.filename else ""
+        mono_name = form_monoUrl.filename if form_monoUrl and form_monoUrl.filename else ""
+
+        if color_name:
+            color_path = pathlib.Path(f'fixedcut_app/templates/static/img/{form_id}/color', color_name)
+            form_colorUrl.save(color_path)
+
+        if mono_name:
+            mono_path = pathlib.Path(f'fixedcut_app/templates/static/img/{form_id}/mono', mono_name)
+            form_monoUrl.save(mono_path)
+
+        # DB登録
+        fixedcut = FixedCut(
+            id=form_id,
+            midashi=form_midashi,
+            Str=form_Str,
+            colorUrl=f'img/{form_id}/color/{color_name}' if color_name else "",
+            monoUrl=f'img/{form_id}/mono/{mono_name}' if mono_name else "",
+            GWFlg=form_GWFlg,
+            prodFlg=form_prodFlg,
+            OTFlg=form_OTFlg,
+            comment=form_comment,
+        )
+        db.session.add(fixedcut)
+        db.session.commit()
+
+        flash(f"{form_id}をレコード追加しました！")
+        app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
+
+    except Exception as e:
+        # クリーンアップ
+        try:
+            shutil.rmtree(f'fixedcut_app/templates/static/img/{form_id}/')
+        except:
+            pass
+
+        print(f"例外args: {e.args}")
+        
+        if form_id == "":
+            flash("※固定カットIDが入力されていません※")
+            flash("固定カットIDを入力してレコード追加してください")
+        else:
+            flash("※すでに登録済みの固定カットIDです※")
+            flash("固定カットIDを変更してレコード追加してください")
+        
+        app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
+
+    return render_template('general_add.html', savelist=savelist)
 
 
 @app.route('/general_detail/<string:id>', methods=['GET', 'POST'])
@@ -243,6 +186,123 @@ def general_detail(id):
         results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
         print(results[0].GWFlg)
         return render_template('general_detail.html', results=results)
+    
+    if request.method == 'POST':
+        # フォームデータを取得（IDは変更しない）
+        form_midashi = request.form.get("midashi")
+        form_Str = request.form.get("Str")
+        form_GWFlg = request.form.get("GWFlg") == "on"
+        form_prodFlg = request.form.get("prodFlg") == "on"
+        form_OTFlg = request.form.get("OTFlg") == "on"
+        form_comment = request.form.get("comment")
+
+        try:
+            # 既存レコードを取得
+            fixedcut = db.session.query(FixedCut).filter(FixedCut.id == id).first()
+            if not fixedcut:
+                flash("※指定されたレコードが見つかりません※")
+                results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
+                return render_template('general_detail.html', results=results)
+
+            # レコード更新（ID以外）
+            fixedcut.midashi = form_midashi
+            fixedcut.Str = form_Str
+            fixedcut.GWFlg = form_GWFlg
+            fixedcut.prodFlg = form_prodFlg
+            fixedcut.OTFlg = form_OTFlg
+            fixedcut.comment = form_comment
+
+            db.session.commit()
+
+            flash(f"{id}をレコード更新しました！")
+            app.logger.info("Updated record id=%s by %s", id, request.remote_addr)
+
+        except Exception as e:
+            print(f"例外args: {e.args}")
+            
+            flash("※レコード更新に失敗しました※")
+            flash("入力内容を確認してください")
+            
+            app.logger.warning("Failed to update record id=%s by %s", id, request.remote_addr)
+
+        # 更新後のデータを再取得して表示
+        results = db.session.query(FixedCut).filter(FixedCut.id.contains(id)).all()
+        return render_template('general_detail.html', results=results)
+
+
+
+@app.route('/general_delete/<string:id>')
+def general_delete(id):
+    print(f"DEBUG: general_delete called with id={id}")
+    try:
+        # 既存レコードを取得
+        fixedcut = db.session.query(FixedCut).filter(FixedCut.id == id).first()
+        print(f"DEBUG: Found record: {fixedcut}")
+        if not fixedcut:
+            flash("※指定されたレコードが見つかりません※")
+            return redirect(url_for('general'))
+
+        # 画像ファイルとフォルダの削除
+        try:
+            # IDと同名のフォルダを丸ごと削除（colorとmonoフォルダを含む）
+            base_dir = pathlib.Path(f'fixedcut_app/templates/static/img/{id}')
+            print(f"DEBUG: Attempting to delete directory: {base_dir}")
+            print(f"DEBUG: Directory exists: {base_dir.exists()}")
+            
+            if base_dir.exists():
+                print(f"DEBUG: Directory contents before deletion:")
+                try:
+                    for item in base_dir.iterdir():
+                        print(f"DEBUG:   {item}")
+                except Exception as e:
+                    print(f"DEBUG: Error listing contents: {e}")
+                
+                print(f"DEBUG: Starting rmtree...")
+                shutil.rmtree(base_dir)
+                print(f"DEBUG: rmtree completed")
+                
+                # 削除確認
+                if not base_dir.exists():
+                    print(f"DEBUG: SUCCESS - Directory deleted: {base_dir}")
+                    app.logger.info(f"Deleted image directory: {base_dir}")
+                else:
+                    print(f"DEBUG: ERROR - Directory still exists after rmtree: {base_dir}")
+                    app.logger.error(f"Failed to delete directory after rmtree: {base_dir}")
+            else:
+                print(f"DEBUG: Directory does not exist: {base_dir}")
+        except Exception as e:
+            print(f"DEBUG: Exception during directory deletion: {e}")
+            print(f"DEBUG: Exception type: {type(e)}")
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            app.logger.warning(f"Failed to delete image directory {id}: {e}")
+
+        # DBからレコード削除
+        print("DEBUG: Deleting record from DB")
+        db.session.delete(fixedcut)
+        db.session.commit()
+        print("DEBUG: Committed deletion")
+
+        # 削除後の確認
+        deleted_check = db.session.query(FixedCut).filter(FixedCut.id == id).first()
+        if deleted_check:
+            flash("※レコード削除に失敗しました※")
+            app.logger.error("Record still exists after delete attempt: %s", id)
+            print("DEBUG: Record still exists after deletion!")
+        else:
+            flash(f"レコード {id} を削除しました")
+            app.logger.info("Successfully deleted record id=%s by %s", id, request.remote_addr)
+            print(f"DEBUG: Successfully deleted record {id}")
+
+    except Exception as e:
+        print(f"DEBUG: Exception in delete: {e}")
+        print(f"例外args: {e.args}")
+        flash("※レコード削除に失敗しました※")
+        app.logger.warning("Failed to delete record id=%s by %s", id, request.remote_addr)
+
+    # 削除後は1ページ目にリダイレクト
+    print("DEBUG: Redirecting to general page 1")
+    return redirect(url_for('general', page=1))
 
 
 

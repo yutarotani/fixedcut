@@ -20,3 +20,50 @@
     white-space: nowrap;
     text-overflow: ellipsis;
 }
+
+.table-container {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.table-container table {
+    min-width: 100%;
+}
+
+.table-container th:first-child,
+.table-container td:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 2;
+}
+
+/* Bootstrapのtable-stripedに対応 */
+.table-striped tbody tr:nth-of-type(odd) .table-data:first-child {
+    background: #f8f9fa;
+}
+
+.table-striped tbody tr:nth-of-type(even) .table-data:first-child {
+    background: white;
+}
+
+.table-container-vertical {
+    overflow-y: auto;
+    max-height: 600px; /* 適当な高さを設定 */
+}
+
+.table-container-vertical table {
+    width: 100%;
+}
+
+.table-container-vertical th {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+}
+
+/* ヘッダーの背景を白く */
+.table-container-vertical thead th {
+    background: white;
+}
