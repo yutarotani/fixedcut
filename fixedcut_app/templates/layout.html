@@ -38,12 +38,12 @@
             {% block content %}{% endblock %}
         </div>
         
-        <dev>
+        <dev class="pad">
             {% with messages = get_flashed_messages() %}
             {% if messages %}
             <ul>
                 {% for message in messages %}
-                <li><h2 class=not-solve>{{ message }}</h2></li>
+                <li><h4 class=not-solve>{{ message }}</h4></li>
                 {% endfor %}
             </ul>
             {% endif %}

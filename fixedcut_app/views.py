@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, send_from_
 from datetime import datetime
 from fixedcut_app import app, db
 from fixedcut_app.models.fixedcut import FixedCut
-import os, pathlib, sqlite3
+import os, pathlib, sqlite3, shutil
 from sqlalchemy import and_
 
 
@@ -105,7 +105,6 @@ def general_add():
         savelist = [form_id, form_midashi, form_Str, form_colorUrl, form_monoUrl,
                     form_GWFlg, form_prodFlg, form_OTFlg,form_comment]
 
-        print(f"form_GWFlg:{form_GWFlg}")
 
         bool_list = [form_GWFlg, form_prodFlg, form_OTFlg]
         bool_res = []
@@ -114,10 +113,6 @@ def general_add():
                 bool_res.append(True)
             else:
                 bool_res.append(False)
-
-
-        print(datetime.now)
-        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
         try:
             os.makedirs(f'fixedcut_app/templates/static/img/{form_id}/color')
@@ -145,33 +140,97 @@ def general_add():
         except(PermissionError):
             pass
 
+        filetypes = [".eps",".jpg",".jpeg",".svg"]
+        if any(filetype in form_colorUrl.filename for filetype in filetypes) or any(filetype in form_monoUrl.filename for filetype in filetypes):
+            try:
+                fixedcut = FixedCut(
+                    id = form_id, #固定カットID
+                    midashi = form_midashi, #仮見出し
+                    Str = form_Str, #一体化時文字列
+                    colorUrl = f'img/{form_id}/color/{color_name}', #カラー画像のURL
+                    monoUrl = f'img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
+                    GWFlg = bool_res[0], #GW登録対象
+                    prodFlg = bool_res[1], #組版本番登録済みか
+                    OTFlg = bool_res[2], #組版OT系登録済みか
+                    comment = form_comment, #コメント
+                    )
+                db.session.add(fixedcut)
+                db.session.commit()
+                flash(f"{form_id}をレコード追加しました！")
+                app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
+                del bool_list
+                del bool_res
+                return render_template('general_add.html', savelist=savelist)
+            except Exception as e:
+                print(print("例外args:", e.args))
+                if form_id == "":
+                    flash("※固定カットIDが入力されていません※")
+                    flash("固定カットIDを入力してレコード追加してください")
+                    app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
+                    del bool_list
+                    del bool_res
+                    return render_template('general_add.html', savelist=savelist)
+                else:
+                    flash("※すでに登録済みの固定カットIDです※")
+                    flash("固定カットIDを変更してレコード追加してください")
+                    app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
+                    del bool_list
+                    del bool_res
+                    return render_template('general_add.html', savelist=savelist)
+        else:
+            
+            if not any(filetype in form_colorUrl.filename for filetype in filetypes) and not any(filetype in form_monoUrl.filename for filetype in filetypes):
+                if form_colorUrl.filename == "" and form_monoUrl.filename != "":
+                    flash("※画像ファイルが登録対象外の拡張子です※")
+                    flash('".eps",".jpg",".jpeg",".svg"のみが登録できます')
+                    flash(f"対象ファイルは以下です")
+                    flash(f"モノクロ画像ファイル：{form_monoUrl.filename}")
+                elif form_colorUrl.filename != "" and form_monoUrl.filename == "":
+                    flash("※画像ファイルが登録対象外の拡張子です※")
+                    flash('".eps",".jpg",".jpeg",".svg"のみが登録できます')
+                    flash(f"対象ファイルは以下です")
+                    flash(f"カラー画像ファイル　：{form_colorUrl.filename}")
+                elif form_colorUrl.filename == "" and form_monoUrl.filename == "":
+                    flash(f"登録対象画像がない状態でレコード登録を試みます")
+                    flash("↓")
 
-        try:
-            fixedcut = FixedCut(
-                id = form_id, #固定カットID
-                midashi = form_midashi, #仮見出し
-                Str = form_Str, #一体化時文字列
-                colorUrl = f'img/{form_id}/color/{color_name}', #カラー画像のURL
-                monoUrl = f'img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
-                GWFlg = bool_res[0], #GW登録対象
-                prodFlg = bool_res[1], #組版本番登録済みか
-                OTFlg = bool_res[2], #組版OT系登録済みか
-                comment = form_comment, #コメント
-                )
-            db.session.add(fixedcut)
-            db.session.commit()
-            flash(f"{form_id}をレコード追加しました！")
-            app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
-        except Exception as e:
-            print(print("例外args:", e.args))
-            if form_id == "":
-                flash("※固定カットIDが入力されていません※")
-                flash("固定カットIDを入力してレコード追加してください")
-                app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
-            else:
-                flash("※すでに登録済みの固定カットIDです※")
-                flash("固定カットIDを変更してレコード追加してください")
-                app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
+                    try:
+                        fixedcut = FixedCut(id = form_id, #固定カットID
+                                            midashi = form_midashi, #仮見出し
+                                            Str = form_Str, #一体化時文字列
+                                            colorUrl = f'img/{form_id}/color/{color_name}', #カラー画像のURL
+                                            monoUrl = f'img/{form_id}/mono/{mono_name}', #モノクロ画像のURL
+                                            GWFlg = bool_res[0], #GW登録対象
+                                            prodFlg = bool_res[1], #組版本番登録済みか
+                                            OTFlg = bool_res[2], #組版OT系登録済みか
+                                            comment = form_comment, #コメント
+                                            )
+                        db.session.add(fixedcut)
+                        db.session.commit()
+                        shutil.rmtree(f'fixedcut_app/templates/static/img/{form_id}/')
+                        flash(f"{form_id}をレコード追加しました！")
+                        app.logger.info("Added record id=%s by %s", form_id, request.remote_addr)
+                        del bool_list
+                        del bool_res
+                        return render_template('general_add.html', savelist=savelist)
+                    except Exception as e:
+                        print(print("例外args:", e.args))
+                        if form_id == "":
+                            flash("※固定カットIDが入力されていません※")
+                            flash("固定カットIDを入力してレコード追加してください")
+                        else:
+                            flash("※すでに登録済みの固定カットIDです※")
+                            flash("固定カットIDを変更してレコード追加してください")
+                else:
+                    flash(f"対象ファイルは以下です")
+                    flash("※画像ファイルが登録対象外の拡張子です※")
+                    flash('".eps",".jpg",".jpeg",".svg"のみが登録できます')
+                    flash(f"カラー画像ファイル　：{form_colorUrl.filename}")
+                    flash(f"モノクロ画像ファイル：{form_monoUrl.filename}")
+
+            shutil.rmtree(f'fixedcut_app/templates/static/img/{form_id}/')
+            app.logger.warning("Failed to add record id=%s by %s", form_id, request.remote_addr)
+
 
         del bool_list
         del bool_res
