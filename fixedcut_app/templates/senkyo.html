@@ -9,50 +9,64 @@ SenkyoHeader
 {% endblock %}
 
 {% block content %}
-コンテンツ部分です
+<div class="container mt-3">
+    <p>選挙関連テーブルの全件表示ページへ遷移できます。</p>
+    <a class="btn btn-primary me-2" href="{{ url_for('senkyo_person_table') }}">SenkyoPerson 全件表示</a>
+    <a class="btn btn-secondary" href="{{ url_for('senkyo_sendgroup_table') }}">SenkyoSendGroup 全件表示</a>
+
+    <hr>
+    <h5>Excelアップロード</h5>
+    <form action="{{ url_for('upload_senkyo_cd_excel') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+        <label for="cdExcelFile" class="form-label">CD用Excel (保存先: static/xlsx/CD)</label>
+        <input type="file" class="form-control" id="cdExcelFile" name="cdExcelFile" accept=".xlsx,.xlsm,.xls,.csv" required>
+        <button type="submit" class="btn btn-outline-primary mt-2">CDフォルダへアップロード</button>
+    </form>
+
+    <form action="{{ url_for('upload_senkyo_sendgroup_excel') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+        <label for="sendgroupExcelFile" class="form-label">sendgroup用Excel (保存先: static/xlsx/sendgroup)</label>
+        <input type="file" class="form-control" id="sendgroupExcelFile" name="sendgroupExcelFile" accept=".xlsx,.xlsm,.xls,.csv" required>
+        <button type="submit" class="btn btn-outline-secondary mt-2">sendgroupフォルダへアップロード</button>
+    </form>
+
+    <hr>
+    <h5>Excelダウンロード</h5>
+    <a class="btn btn-success me-2" href="{{ url_for('download_senkyo_person_excel') }}">SenkyoPersonをExcelでダウンロード</a>
+    <a class="btn btn-success" href="{{ url_for('download_senkyo_sendgroup_excel') }}">SenkyoSendGroupをExcelでダウンロード</a>
+
+    <hr>
+    <h5>データ削除</h5>
+    <form action="{{ url_for('reset_cd_person_data') }}" method="POST" onsubmit="return confirmResetCdPerson();">
+        <button type="submit" class="btn btn-danger">CD Excel全破棄 + SenkyoPerson全削除</button>
+    </form>
+</div>
+
+<script>
+function confirmResetCdPerson() {
+    return confirm('CDフォルダのExcelデータをすべて破棄し、SenkyoPersonテーブルを全削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
+}
+</script>
 {% endblock %}
 
-{% block serchbar %}
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <form class="form-group" action="senkyo-serch" method="POST">
-        <ul class="navbar-nav">
-            <li class="nav-item">
-                <label for="ID">固定カットID:</label>
-                <input name="ID" type="ID" class="form-control" id="ID">
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">about</a>
-            </li>
-            <li class="nav-item">
-                <button type="submit" class="btn btn-primary">検索</button>
-            </li>
-        </ul>
-    </form>
-</nav>
-{% endblock %}
+
 
 {% block serch_result %}
  <div class="container mt-4">
-    <h2>検索結果結果</h2>
+    <h2>CDフォルダ内のExcelファイル一覧</h2>
     <table class="table table-striped table-hover">
         <tr>
-            <th>仮見出し</th>
-            <th>固定カットID</th>
-            <th>一体化時文字列</th>
+            <th>No</th>
+            <th>ファイル名</th>
         </tr>
-        {% for res in results %}
+        {% for file_name in cd_excel_files %}
         <tr>
-            <td>
-                {{ res.midashi }}
-            </td>
-            <td>
-                {{ res.ID }}
-            </td>
-            <td>
-                {{ res.Str }}
-            </td>
+            <td>{{ loop.index }}</td>
+            <td>{{ file_name }}</td>
         </tr>
-         {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="2">CDフォルダにExcelファイルはありません</td>
+        </tr>
+        {% endfor %}
     </table>
 </div>
 {% endblock %}

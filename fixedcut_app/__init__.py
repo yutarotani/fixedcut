@@ -53,7 +53,7 @@ cleanup_old_logs()
 
 app.logger.info('Application startup')
 
-from.models import fixedcut, senkyo_person, senkyo_sendgroup
+from.models import fixedcut, m_jyochu_image_cnv, senkyo_person, senkyo_sendgroup
 
 import fixedcut_app.views
 

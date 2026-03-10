@@ -62,7 +62,7 @@ general_serch
 {% block serch_result %}
  <div class="pad">
     <p>編集対象：{{results[0].id}}</p>
-    <form action="/general_detail/{{ results[0].id }}" method="POST" enctype="multipart/form-data">
+    <form id="generalDetailForm" action="/general_detail/{{ results[0].id }}" method="POST" enctype="multipart/form-data" onsubmit="return confirmDetailUpdate(event)">
         <table class="table table-striped table-hover">
             <tr>
                 <th>固定カットID</th>
@@ -138,6 +138,30 @@ general_serch
 </form>
 
 <script>
+function confirmDetailUpdate(event) {
+    const hasJyochu = {{ 'true' if jyochu_result else 'false' }};
+    if (!hasJyochu) {
+        return true;
+    }
+
+    const strInput = document.querySelector('input[name="Str"]');
+    const newStr = strInput ? strInput.value : '';
+    const ok = confirm(
+        '同じ固定カットIDが m_jyochu_image_cnv に存在します。\n' +
+        '一体化時文字列の値で画像説明(fixed_cut_img_explanation)も更新します。\n\n' +
+        '更新してよろしいですか？\n' +
+        '一体化時文字列: ' + newStr
+    );
+
+    if (!ok) {
+        if (event) {
+            event.preventDefault();
+        }
+        return false;
+    }
+    return true;
+}
+
 function confirmDelete(id) {
     if (confirm('本当にこのレコードを削除しますか？\nID: ' + id)) {
         window.location.href = '/general_delete/' + id;
@@ -145,6 +169,32 @@ function confirmDelete(id) {
 }
 </script>
 </div>
+
+{% if jyochu_result %}
+<div class="pad mt-4">
+    <h5>画像変換マスタ (m_jyochu_image_cnv)</h5>
+    <table class="table table-striped table-hover">
+        <tr>
+            <th>固定カットID</th>
+            <th>画像説明</th>
+            <th>更新回数</th>
+            <th>作成日時</th>
+            <th>更新日時</th>
+            <th>パッチ番号</th>
+            <th>パッチ日時</th>
+        </tr>
+        <tr>
+            <td class="text-center fw-bold">{{ jyochu_result.fixed_cut_id }}</td>
+            <td>{{ jyochu_result.fixed_cut_img_explanation }}</td>
+            <td class="text-center">{{ jyochu_result.upd_count }}</td>
+            <td>{{ jyochu_result.created_datetime }}</td>
+            <td>{{ jyochu_result.updated_datetime }}</td>
+            <td>{{ jyochu_result.patch_no }}</td>
+            <td>{{ jyochu_result.patch_datetime }}</td>
+        </tr>
+    </table>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block footer %}

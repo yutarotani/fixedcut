@@ -9,7 +9,20 @@ index
 {% endblock %}
 
 {% block content %}
-コンテンツ部分です
+<div class="container mt-3">
+	<h5>m_jyochu_image_cnv Excel連携</h5>
+	<p>Excelをアップロードして差分を追加・更新します。</p>
+
+	<form action="{{ url_for('upload_m_jyochu_excel') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+		<div class="mb-2">
+			<label for="excelFile" class="form-label">Excel/CSVファイル (.xlsx / .xlsm / .xls / .csv)</label>
+			<input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx,.xlsm,.xls,.csv" required>
+		</div>
+		<button type="submit" class="btn btn-primary">差分取込を実行</button>
+	</form>
+
+	<a href="{{ url_for('download_m_jyochu_excel') }}" class="btn btn-success">m_jyochu_image_cnvをExcelでダウンロード</a>
+</div>
 {% endblock %}
 
 {% block footer %}
