@@ -488,18 +488,55 @@ def reset_cd_person_data():
     return redirect(url_for('senkyo'))
 
 
-@app.route('/senkyo_person_table')
+@app.route('/senkyo_person_table', methods=['GET', 'POST'])
 def senkyo_person_table():
-    person_rows = db.session.query(SenkyoPerson).order_by(SenkyoPerson.id.asc()).all()
-    person_columns = [c.name for c in SenkyoPerson.__table__.columns]
-    savelist=[]
+    if request.method == 'GET':
+        person_rows = db.session.query(SenkyoPerson.id,
+                                       SenkyoPerson.syubetu,
+                                       SenkyoPerson.senkyoku,
+                                       SenkyoPerson.senkyokuNo,
+                                       SenkyoPerson.sendGroup,
+                                       SenkyoPerson.hirei,
+                                       SenkyoPerson.name,
+                                       SenkyoPerson.hurigana,
+                                       SenkyoPerson.seito,
+                                       SenkyoPerson.genshinbetu,
+                                       SenkyoPerson.CD_No,
+                                       SenkyoPerson.fixedcutID,
+                                       SenkyoPerson.updateCount,
+                                       SenkyoPerson.created_at,
+                                       SenkyoPerson.updated_at
+                                       ).order_by(SenkyoPerson.id.asc()).all()
+        person_columns = ["人物ID",
+                          "種別",
+                          "選挙区",
+                          "選挙区番号",
+                          "配信グループ",
+                          "比例選挙区",
+                          "候補者氏名",
+                          "ふりがな",
+                          "政党",
+                          "現新別",
+                          "CD_No",
+                          "固定カットID",
+                          "更新回数",
+                          "作成日時",
+                          "更新日時"]
+        savelist=["","","","","","","","",""]
 
-    return render_template(
-        'senkyo_person_table.html',
-        person_rows=person_rows,
-        person_columns=person_columns,
-        savelist=savelist
-    )
+        print(len(person_rows))
+        print(person_rows[0])
+        
+        return render_template('senkyo_person_table.html',
+                               person_rows=person_rows,
+                               person_columns=person_columns,
+                               savelist=savelist
+                               )
+    
+    if request.method == 'POST':
+        req = request.form["personID"]
+        print(req)
+        return f'POSTdata:{req}' 
 
 
 @app.route('/senkyo_sendgroup_table')

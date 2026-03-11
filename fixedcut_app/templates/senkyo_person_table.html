@@ -10,15 +10,15 @@ SenkyoPerson Table
 
 {% block serchbar %}
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <form class="form-group" action="{{ url_for('general') }}" method="POST">
+    <form class="form-group" action="{{ url_for('senkyo_person_table') }}" method="POST">
         <ul class="navbar-nav">
             <li class="nav-item">
                 <label for="personID">人物ID:</label>
-                <input name="personID" type="text" class="form-control" id="ID" value="{{ savelist[1] }}">
+                <input name="personID" type="text" class="form-control" id="personID" value="{{ savelist[0] }}">
             </li>
             <li class="nav-item">
                 <label for="syubetsu">種別:</label>
-                <input name="syubetsu" type="text" class="form-control" id="syubetsu" value="{{ savelist[0] }}">
+                <input name="syubetsu" type="text" class="form-control" id="syubetsu" value="{{ savelist[1] }}">
             </li>
             <li class="nav-item">
                 <label for="senkyoku">選挙区:</label>
@@ -26,26 +26,30 @@ SenkyoPerson Table
             </li>
             <li class="nav-item">
                 <label for="senkyokuNo">選挙区番号:</label>
-                <input name="senkyokuNo" type="text" class="form-control" id="senkyokuNo" value="{{ savelist[2] }}">
+                <input name="senkyokuNo" type="text" class="form-control" id="senkyokuNo" value="{{ savelist[3] }}">
             </li>
             <li class="nav-item">
                 <label for="sendgroup">配信グループ:</label>
-                <input name="sendgroup" type="text" class="form-control" id="sendgroup" value="{{ savelist[2] }}">
+                <input name="sendgroup" type="text" class="form-control" id="sendgroup" value="{{ savelist[4] }}">
             </li>
             <li class="nav-item">
                 <label for="hirei">比例選挙区:</label>
-                <input name="hirei" type="text" class="form-control" id="hirei" value="{{ savelist[2] }}">
+                <input name="hirei" type="text" class="form-control" id="hirei" value="{{ savelist[5] }}">
+            </li>
+            <li class="nav-item">
+                <label for="shimei">候補者氏名:</label>
+                <input name="shimei" type="text" class="form-control" id="shimei" value="{{ savelist[6] }}">
             </li>
             <li class="nav-item">
                 <label for="startdate">開始日時:</label>
-                <input name="startdate" type="date" class="form-control" id="startdate" value="{{ savelist[6] }}">
+                <input name="startdate" type="date" class="form-control" id="startdate" value="{{ savelist[7] }}">
             </li>
             <li class="nav-item pad-above">
                 <h4>～</h4>
             </li>
             <li class="nav-item ">
                 <label for="enddate">終了日時:</label>
-                <input name="enddate" type="date" class="form-control" id="enddate" value="{{ savelist[7] }}">
+                <input name="enddate" type="date" class="form-control" id="enddate" value="{{ savelist[8] }}">
             </li>
             <li class="nav-item pad-above">
                 <button type="submit" class="btn btn-primary">検索</button>
@@ -62,12 +66,13 @@ SenkyoPerson Table
     $('#enddate').datepicker();
 
     function clearForm() {
-        document.querySelector('input[name="ID"]').value = '';
-        document.querySelector('input[name="midashi"]').value = '';
-        document.querySelector('input[name="Str"]').value = '';
-        document.querySelector('input[name="GWFlg"]').checked = false;
-        document.querySelector('input[name="prodFlg"]').checked = false;
-        document.querySelector('input[name="OTFlg"]').checked = false;
+        document.querySelector('input[name="personID"]').value = '';
+        document.querySelector('input[name="syubetsu"]').value = '';
+        document.querySelector('input[name="senkyoku"]').value = '';
+        document.querySelector('input[name="senkyokuNo"]').value = '';
+        document.querySelector('input[name="sendgroup"]').value = '';
+        document.querySelector('input[name="hirei"]').value = '';
+        document.querySelector('input[name="shimei"]').value = '';
         document.querySelector('input[name="startdate"]').value = '';
         document.querySelector('input[name="enddate"]').value = '';
     }
@@ -90,8 +95,8 @@ SenkyoPerson Table
             <tbody>
                 {% for row in person_rows %}
                 <tr>
-                    {% for col in person_columns %}
-                    <td>{{ row[col] }}</td>
+                    {% for i in range( row | length ) %}
+                    <td>{{ row[i] }}</td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
