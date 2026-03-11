@@ -21,5 +21,7 @@ class SenkyoPerson(db.Model):
     CD_No = db.Column(db.String(5))  #配信CD
     fixedcutID = db.Column(db.String(20))  #固定カットID
     updateCount = db.Column(db.Integer) #更新回数
+    store_date = db.Column(db.DateTime)
+    operater = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)  # 作成日時
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)  # 更新日時
