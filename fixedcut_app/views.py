@@ -13,6 +13,7 @@ from io import BytesIO
 import csv
 
 
+
 @app.route('/')
 def index():
     return render_template('index.html', name='Flask Beginner')
@@ -491,11 +492,13 @@ def reset_cd_person_data():
 def senkyo_person_table():
     person_rows = db.session.query(SenkyoPerson).order_by(SenkyoPerson.id.asc()).all()
     person_columns = [c.name for c in SenkyoPerson.__table__.columns]
+    savelist=[]
 
     return render_template(
         'senkyo_person_table.html',
         person_rows=person_rows,
         person_columns=person_columns,
+        savelist=savelist
     )
 
 
