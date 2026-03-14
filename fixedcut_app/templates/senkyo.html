@@ -35,14 +35,21 @@
 
     <hr>
     <h5>データ削除</h5>
-    <form action="{{ url_for('reset_cd_person_data') }}" method="POST" onsubmit="return confirmResetCdPerson();">
+    <form action="{{ url_for('reset_cd_person_data') }}" method="POST" onsubmit="return confirmResetCdPerson();" class="mb-2">
         <button type="submit" class="btn btn-danger">CDデータ全破棄 + 登録済み候補者全削除</button>
+    </form>
+    <form action="{{ url_for('reset_sendgroup_data') }}" method="POST" onsubmit="return confirmResetSendgroup();">
+        <button type="submit" class="btn btn-danger">配信グループ設定レコード全削除</button>
     </form>
 </div>
 
 <script>
 function confirmResetCdPerson() {
     return confirm('CDフォルダのExcel,CSVデータをすべて破棄し、登録済み候補者のレコードを全削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
+}
+
+function confirmResetSendgroup() {
+    return confirm('SenkyoSendGroupのレコードを全削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
 }
 </script>
 {% endblock %}

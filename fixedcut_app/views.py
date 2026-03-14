@@ -6,6 +6,7 @@ from fixedcut_app.models.m_jyochu_image_cnv import MJyochuImageCnv
 from fixedcut_app.models.senkyo_person import SenkyoPerson
 from fixedcut_app.models.senkyo_sendgroup import SenkyoSendGroup
 import os, pathlib, sqlite3, shutil
+import importlib
 from sqlalchemy import and_
 from werkzeug.utils import secure_filename
 from openpyxl import load_workbook, Workbook
@@ -23,6 +24,11 @@ def _to_text(value):
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _normalize_area_text(value):
+    # area照合のぶれを減らすため、全角/半角スペースを除去して比較する。
+    return _to_text(value).replace('\u3000', '').replace(' ', '')
 
 
 def _to_int(value, default=0):
@@ -71,26 +77,45 @@ def _parse_date_or_none(value):
     return None
 
 
+def _parse_datetime_local_or_none(value):
+    text = _to_text(value)
+    if text == '':
+        return None
+    for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
 def _match_sendgroup_value(syubetu, senkyoku, senkyoku_no_num, hirei):
-    query = db.session.query(SenkyoSendGroup)
-    sendgroup = None
+    rows = db.session.query(SenkyoSendGroup).order_by(SenkyoSendGroup.id.asc()).all()
+    if not rows:
+        return ''
 
-    if syubetu == '比例':
-        if hirei:
-            sendgroup = query.filter(SenkyoSendGroup.area == hirei).order_by(SenkyoSendGroup.id.asc()).first()
-    else:
-        if senkyoku and senkyoku_no_num is not None:
-            sendgroup = query.filter(
-                SenkyoSendGroup.area == senkyoku,
-                SenkyoSendGroup.syosenkyoNum == senkyoku_no_num,
-            ).order_by(SenkyoSendGroup.id.asc()).first()
-        if sendgroup is None and senkyoku:
-            sendgroup = query.filter(SenkyoSendGroup.area == senkyoku).order_by(SenkyoSendGroup.id.asc()).first()
+    target_area = _normalize_area_text(hirei if syubetu == '比例' else senkyoku)
+    fallback_area = _normalize_area_text(senkyoku if syubetu == '比例' else hirei)
 
-    if sendgroup is None and hirei:
-        sendgroup = query.filter(SenkyoSendGroup.area == hirei).order_by(SenkyoSendGroup.id.asc()).first()
+    # 1) area + 小選挙区番号 の一致を優先
+    if target_area and senkyoku_no_num is not None and syubetu != '比例':
+        for row in rows:
+            if _normalize_area_text(row.area) == target_area and row.syosenkyoNum == senkyoku_no_num:
+                return _to_text(row.sendGroup)
 
-    return sendgroup.sendGroup if sendgroup else ''
+    # 2) area の一致で決定（要件: SenkyoSendGroup.area を参照して sendGroup を設定）
+    if target_area:
+        for row in rows:
+            if _normalize_area_text(row.area) == target_area:
+                return _to_text(row.sendGroup)
+
+    # 3) もう一方の area 候補もフォールバック参照
+    if fallback_area:
+        for row in rows:
+            if _normalize_area_text(row.area) == fallback_area:
+                return _to_text(row.sendGroup)
+
+    return ''
 
 
 def _iter_upload_rows(file_path):
@@ -179,6 +204,98 @@ def _upsert_senkyo_person_from_cd_file(file_path):
     return inserted, updated, skipped
 
 
+def _read_tabular_file(file_path):
+    ext = file_path.suffix.lower()
+
+    if ext == '.csv':
+        rows = None
+        for enc in ('cp932', 'shift_jis', 'utf-8-sig', 'utf-8'):
+            try:
+                with open(file_path, 'r', encoding=enc, newline='') as f:
+                    rows = list(csv.reader(f))
+                break
+            except UnicodeDecodeError:
+                continue
+        if rows is None:
+            raise ValueError('CSVの文字コードを判定できませんでした')
+        if not rows:
+            return [], []
+        return rows[0], rows[1:]
+
+    if ext == '.xls':
+        try:
+            xlrd = importlib.import_module('xlrd')
+        except ImportError as exc:
+            raise ValueError('.xls形式の読込に必要なライブラリ(xlrd)が未導入です') from exc
+
+        wb = xlrd.open_workbook(file_path)
+        ws = wb.sheet_by_index(0)
+        if ws.nrows == 0:
+            return [], []
+        headers = [ws.cell_value(0, c) for c in range(ws.ncols)]
+        data_rows = [ws.row_values(r) for r in range(1, ws.nrows)]
+        return headers, data_rows
+
+    wb = load_workbook(file_path, data_only=True)
+    ws = wb.active
+    if ws.max_row == 0:
+        return [], []
+    headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+    data_rows = list(ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column, values_only=True))
+    return headers, data_rows
+
+
+def _import_senkyo_sendgroup_from_file(file_path):
+    headers, data_rows = _read_tabular_file(file_path)
+    if not headers:
+        return 0, 0
+
+    normalized_headers = [_to_text(h) for h in headers]
+    header_index = {h: i for i, h in enumerate(normalized_headers)}
+
+    def pick(row, candidates, fallback_index):
+        for name in candidates:
+            idx = header_index.get(name)
+            if idx is not None and idx < len(row):
+                return row[idx]
+        if fallback_index < len(row):
+            return row[fallback_index]
+        return None
+
+    inserted = 0
+    skipped = 0
+
+    # 取込は毎回全置換にして、ファイル内容とDBを一致させる。
+    db.session.query(SenkyoSendGroup).delete(synchronize_session=False)
+
+    for row in data_rows:
+        if row is None:
+            skipped += 1
+            continue
+
+        syubetu = _to_text(pick(row, ('選挙種別', '種別', 'syubetu'), 0))
+        area = _to_text(pick(row, ('エリア名', '選挙区', 'area'), 1))
+        syosenkyo_num = _to_int_or_none(pick(row, ('小選挙区数', '小選挙数', '小選挙区', 'syosenkyoNum'), 2))
+        if syosenkyo_num is None:
+            syosenkyo_num = 0
+        send_group = _to_text(pick(row, ('共同送信グループ', '配信グループ', 'sendGroup'), 3))
+
+        if not syubetu and not area and syosenkyo_num is None and not send_group:
+            skipped += 1
+            continue
+
+        record = SenkyoSendGroup(
+            syubetu=syubetu,
+            area=area,
+            syosenkyoNum=syosenkyo_num,
+            sendGroup=send_group,
+        )
+        db.session.add(record)
+        inserted += 1
+
+    return inserted, skipped
+
+
 @app.route('/m_jyochu_image_cnv/upload', methods=['POST'])
 def upload_m_jyochu_excel():
     upload_file = request.files.get('excelFile')
@@ -195,8 +312,9 @@ def upload_m_jyochu_excel():
     xlsx_dir.mkdir(parents=True, exist_ok=True)
 
     safe_name = secure_filename(upload_file.filename)
-    if not safe_name:
-        safe_name = 'uploaded_m_jyochu_image_cnv.xlsx'
+    # 日本語ファイル名などで secure_filename が拡張子を落とすことがあるため、拡張子は必ず維持する。
+    if (not safe_name) or (pathlib.Path(safe_name).suffix.lower() != ext):
+        safe_name = f'uploaded_m_jyochu_image_cnv{ext}'
 
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     save_path = xlsx_dir / f'{timestamp}_{safe_name}'
@@ -220,6 +338,26 @@ def upload_m_jyochu_excel():
 
         headers = [_to_text(x) for x in rows[0]]
         data_rows = rows[1:]
+    elif ext == '.xls':
+        try:
+            xlrd = importlib.import_module('xlrd')
+        except ImportError:
+            flash('※.xls形式の読込に必要なライブラリ(xlrd)が未導入です。Excelで .xlsx か .csv に変換して再度取り込んでください※')
+            return redirect(url_for('index'))
+
+        try:
+            wb = xlrd.open_workbook(save_path)
+            ws = wb.sheet_by_index(0)
+        except Exception as exc:
+            flash(f'※Excel読込に失敗しました※ {exc}')
+            return redirect(url_for('index'))
+
+        if ws.nrows < 2:
+            flash('※データ行がありません※')
+            return redirect(url_for('index'))
+
+        headers = [_to_text(ws.cell_value(0, c)) for c in range(ws.ncols)]
+        data_rows = [ws.row_values(r) for r in range(1, ws.nrows)]
     else:
         try:
             wb = load_workbook(save_path, data_only=True)
@@ -245,6 +383,7 @@ def upload_m_jyochu_excel():
             return row[fallback_index]
         return None
 
+    # 取込はアップロードファイルの行順をそのまま処理する（ソートしない）。
     inserted = 0
     updated = 0
     unchanged = 0
@@ -307,7 +446,8 @@ def upload_m_jyochu_excel():
 
 @app.route('/m_jyochu_image_cnv/download', methods=['GET'])
 def download_m_jyochu_excel():
-    records = db.session.query(MJyochuImageCnv).order_by(MJyochuImageCnv.fixed_cut_id.asc()).all()
+    # ダウンロードはDBの取得順をそのまま使う（ソートしない）。
+    records = db.session.query(MJyochuImageCnv).all()
 
     wb = Workbook()
     ws = wb.active
@@ -389,7 +529,10 @@ def _save_excel_to_static_subdir(upload_file, sub_dir_name, default_name):
     base_dir = _xlsx_base_dir() / sub_dir_name
     base_dir.mkdir(parents=True, exist_ok=True)
 
-    safe_name = secure_filename(upload_file.filename) or default_name
+    safe_name = secure_filename(upload_file.filename)
+    # 日本語名などで secure_filename が拡張子を落とすことがあるため、拡張子は必ず維持する。
+    if (not safe_name) or (pathlib.Path(safe_name).suffix.lower() != ext):
+        safe_name = f'uploaded_{sub_dir_name}{ext}'
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     save_path = base_dir / f'{timestamp}_{safe_name}'
     upload_file.save(save_path)
@@ -421,6 +564,17 @@ def upload_senkyo_sendgroup_excel():
     upload_file = request.files.get('sendgroupExcelFile')
     ok, message = _save_excel_to_static_subdir(upload_file, 'sendgroup', 'sendgroup_upload.xlsx')
     flash(message)
+
+    if ok:
+        saved_path = pathlib.Path(message.split(': ', 1)[1])
+        try:
+            inserted, skipped = _import_senkyo_sendgroup_from_file(saved_path)
+            db.session.commit()
+            flash(f'SenkyoSendGroup 取込完了: {inserted}件 / スキップ: {skipped}件')
+        except Exception as exc:
+            db.session.rollback()
+            flash(f'※SenkyoSendGroup取込に失敗しました※ {exc}')
+
     return redirect(url_for('senkyo'))
 
 
@@ -488,55 +642,200 @@ def reset_cd_person_data():
     return redirect(url_for('senkyo'))
 
 
-@app.route('/senkyo_person_table', methods=['GET', 'POST'])
-def senkyo_person_table():
-    if request.method == 'GET':
-        person_rows = db.session.query(SenkyoPerson.id,
-                                       SenkyoPerson.syubetu,
-                                       SenkyoPerson.senkyoku,
-                                       SenkyoPerson.senkyokuNo,
-                                       SenkyoPerson.sendGroup,
-                                       SenkyoPerson.hirei,
-                                       SenkyoPerson.name,
-                                       SenkyoPerson.hurigana,
-                                       SenkyoPerson.seito,
-                                       SenkyoPerson.genshinbetu,
-                                       SenkyoPerson.CD_No,
-                                       SenkyoPerson.fixedcutID,
-                                       SenkyoPerson.updateCount,
-                                       SenkyoPerson.created_at,
-                                       SenkyoPerson.updated_at
-                                       ).order_by(SenkyoPerson.id.asc()).all()
-        person_columns = ["人物ID",
-                          "種別",
-                          "選挙区",
-                          "選挙区番号",
-                          "配信グループ",
-                          "比例選挙区",
-                          "候補者氏名",
-                          "ふりがな",
-                          "政党",
-                          "現新別",
-                          "CD_No",
-                          "固定カットID",
-                          "更新回数",
-                          "作成日時",
-                          "更新日時"]
-        savelist=["","","","","","","","",""]
+@app.route('/senkyo/reset_sendgroup', methods=['POST'])
+def reset_sendgroup_data():
+    try:
+        deleted_rows = db.session.query(SenkyoSendGroup).delete(synchronize_session=False)
+        db.session.commit()
+        flash('SenkyoSendGroupのレコード全削除を実行しました')
+        flash(f'削除レコード数: {deleted_rows}件')
+    except Exception as exc:
+        db.session.rollback()
+        flash(f'※SenkyoSendGroup削除処理に失敗しました※ {exc}')
 
-        print(len(person_rows))
-        print(person_rows[0])
-        
-        return render_template('senkyo_person_table.html',
-                               person_rows=person_rows,
-                               person_columns=person_columns,
-                               savelist=savelist
-                               )
-    
-    if request.method == 'POST':
-        req = request.form["personID"]
-        print(req)
-        return f'POSTdata:{req}' 
+    return redirect(url_for('senkyo'))
+
+
+@app.route('/senkyo_person_table', methods=['GET', 'POST'])
+@app.route('/senkyo_person_table/<int:page>', methods=['GET', 'POST'])
+def senkyo_person_table(page=1):
+    per_page = 100
+
+    if request.method == 'POST' and request.form.get('action') == 'bulk_update':
+        updated = 0
+        invalid = 0
+
+        person_ids = request.form.getlist('person_ids')
+        for person_id_text in person_ids:
+            person_id = _to_int_or_none(person_id_text)
+            if person_id is None:
+                continue
+
+            rec = db.session.get(SenkyoPerson, person_id)
+            if rec is None:
+                continue
+
+            changed = False
+
+            fixedcut_id_input = _to_text(request.form.get(f'fixedcutID_{person_id}', ''))
+            if fixedcut_id_input != '' and rec.fixedcutID != fixedcut_id_input:
+                rec.fixedcutID = fixedcut_id_input
+                changed = True
+
+            men_name_input = _to_text(request.form.get(f'MenName_{person_id}', ''))
+            if men_name_input != '' and rec.MenName != men_name_input:
+                rec.MenName = men_name_input
+                changed = True
+
+            operater_input = _to_text(request.form.get(f'operater_{person_id}', ''))
+            if operater_input != '' and rec.operater != operater_input:
+                rec.operater = operater_input
+                changed = True
+
+            output_flg_input = request.form.get(f'output_Flg_{person_id}') == '1'
+            current_output_flg = bool(rec.output_Flg)
+            if current_output_flg != output_flg_input:
+                rec.output_Flg = output_flg_input
+                changed = True
+
+            store_date_text = _to_text(request.form.get(f'store_date_{person_id}', ''))
+            if store_date_text != '':
+                parsed_store_date = _parse_datetime_local_or_none(store_date_text)
+                if parsed_store_date is None:
+                    invalid += 1
+                elif rec.store_date != parsed_store_date:
+                    rec.store_date = parsed_store_date
+                    changed = True
+
+            if changed:
+                updated += 1
+
+        try:
+            db.session.commit()
+            flash(f'SenkyoPerson 差分更新完了: {updated}件')
+            if invalid > 0:
+                flash(f'日時形式が不正で更新しなかった件数: {invalid}件')
+        except Exception as exc:
+            db.session.rollback()
+            flash(f'※SenkyoPerson差分更新に失敗しました※ {exc}')
+        # 更新後は同一リクエスト内で再検索して最新状態を表示する。
+
+    res = {
+        "personID": request.values.get("personID", ""),
+        "syubetsu": request.values.get("syubetsu", ""),
+        "senkyoku": request.values.get("senkyoku", ""),
+        "senkyokuNo": request.values.get("senkyokuNo", ""),
+        "sendgroup": request.values.get("sendgroup", ""),
+        "hirei": request.values.get("hirei", ""),
+        "shimei": request.values.get("shimei", ""),
+        "CD_No": request.values.get("CD_No", ""),
+        "startdate": request.values.get("startdate", ""),
+        "enddate": request.values.get("enddate", ""),
+    }
+
+    savelist = [
+        res["personID"],
+        res["syubetsu"],
+        res["senkyoku"],
+        res["senkyokuNo"],
+        res["sendgroup"],
+        res["hirei"],
+        res["shimei"],
+        res["CD_No"],
+        res["startdate"],
+        res["enddate"],
+    ]
+
+    query = db.session.query(
+        SenkyoPerson.id,
+        SenkyoPerson.syubetu,
+        SenkyoPerson.senkyoku,
+        SenkyoPerson.senkyokuNo,
+        SenkyoPerson.sendGroup,
+        SenkyoPerson.hirei,
+        SenkyoPerson.name,
+        SenkyoPerson.hurigana,
+        SenkyoPerson.seibetsu,
+        SenkyoPerson.seito,
+        SenkyoPerson.genshinbetu,
+        SenkyoPerson.CD_No,
+        SenkyoPerson.fixedcutID,
+        SenkyoPerson.MenName,
+        SenkyoPerson.store_date,
+        SenkyoPerson.operater,
+        SenkyoPerson.output_Flg,
+        SenkyoPerson.created_at,
+        SenkyoPerson.updated_at,
+    )
+
+    if res["personID"]:
+        person_id = _to_int_or_none(res["personID"])
+        if person_id is not None:
+            query = query.filter(SenkyoPerson.id == person_id)
+
+    if res["syubetsu"]:
+        query = query.filter(SenkyoPerson.syubetu.contains(res["syubetsu"]))
+    if res["senkyoku"]:
+        query = query.filter(SenkyoPerson.senkyoku.contains(res["senkyoku"]))
+    if res["senkyokuNo"]:
+        query = query.filter(SenkyoPerson.senkyokuNo.contains(res["senkyokuNo"]))
+    if res["sendgroup"]:
+        query = query.filter(SenkyoPerson.sendGroup.contains(res["sendgroup"]))
+    if res["hirei"]:
+        query = query.filter(SenkyoPerson.hirei.contains(res["hirei"]))
+    if res["shimei"]:
+        query = query.filter(SenkyoPerson.name.contains(res["shimei"]))
+    if res["CD_No"]:
+        query = query.filter(SenkyoPerson.CD_No.contains(res["CD_No"]))
+
+    if res["startdate"]:
+        start_date = datetime.strptime(res["startdate"], '%Y-%m-%d')
+        query = query.filter(SenkyoPerson.created_at >= start_date)
+    if res["enddate"]:
+        end_date = datetime.strptime(res["enddate"], '%Y-%m-%d')
+        query = query.filter(SenkyoPerson.created_at <= end_date)
+
+    pagination = query.order_by(SenkyoPerson.id.asc()).paginate(page=page, per_page=per_page, error_out=False)
+    person_rows = pagination.items
+
+    person_columns = [
+        "人物ID",
+        "種別",
+        "選挙区",
+        "選挙区番号",
+        "配信グループ",
+        "比例選挙区",
+        "候補者氏名",
+        "ふりがな",
+        "性別",
+        "政党",
+        "現新別",
+        "CD_No",
+        "固定カットID",
+        "登録先面名",
+        "保存日時",
+        "操作担当者",
+        "選挙出力フラグ",
+        "作成日時",
+        "更新日時",
+    ]
+
+    return render_template(
+        'senkyo_person_table.html',
+        person_rows=person_rows,
+        person_columns=person_columns,
+        savelist=savelist,
+        pagination=pagination,
+    )
+
+
+@app.route('/senkyo_person_table_detail/<int:id>', methods=['GET'])
+def senkyo_person_table_detail(id):
+    person = db.session.query(SenkyoPerson).filter(SenkyoPerson.id == id).first()
+    if person is None:
+        return render_template('error_404.html'), 404
+
+    return render_template('senkyo_person_table_detail.html', person=person)
 
 
 @app.route('/senkyo_sendgroup_table')

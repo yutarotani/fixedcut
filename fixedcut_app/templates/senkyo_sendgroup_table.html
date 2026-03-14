@@ -24,7 +24,7 @@ SenkyoSendGroup Table
                 {% for row in sendgroup_rows %}
                 <tr>
                     {% for col in sendgroup_columns %}
-                    <td>{{ row[col] }}</td>
+                    <td>{{ (row | attr(col)) if (row | attr(col)) is not none else 0 }}</td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
