@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from openpyxl import load_workbook, Workbook
 from io import BytesIO
 import csv
+import unicodedata
 
 
 
@@ -25,6 +26,11 @@ def _to_text(value):
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _normalize_fixedcut_id(value):
+    # 全角英数を半角へ正規化し、前後空白を除去する。
+    return unicodedata.normalize('NFKC', _to_text(value))
 
 
 def _normalize_area_text(value):
@@ -531,6 +537,12 @@ def senkyo():
     return senkyo_handler()
 
 
+@app.route('/senkyo/sendgroup_text')
+def senkyo_sendgroup_text():
+    from fixedcut_app.views_senkyo import senkyo_sendgroup_text_handler
+    return senkyo_sendgroup_text_handler()
+
+
 def _save_excel_to_static_subdir(upload_file, sub_dir_name, default_name):
     if not upload_file or upload_file.filename == '':
         return False, '※Excelファイルを選択してください※'
@@ -701,7 +713,7 @@ def senkyo_person_table(page=1):
 
             changed = False
 
-            fixedcut_id_input = _to_text(request.form.get(f'fixedcutID_{person_id}', ''))
+            fixedcut_id_input = _normalize_fixedcut_id(request.form.get(f'fixedcutID_{person_id}', ''))
             if fixedcut_id_input != '' and rec.fixedcutID != fixedcut_id_input:
                 rec.fixedcutID = fixedcut_id_input
                 changed = True
@@ -734,7 +746,7 @@ def senkyo_person_table(page=1):
             if changed:
                 updated += 1
 
-            fixedcut_id_for_sync = _to_text(request.form.get(f'fixedcutID_{person_id}', ''))
+            fixedcut_id_for_sync = _normalize_fixedcut_id(request.form.get(f'fixedcutID_{person_id}', ''))
             if fixedcut_id_for_sync == '':
                 fixedcut_id_for_sync = _to_text(rec.fixedcutID)
 
@@ -901,7 +913,7 @@ def senkyo_person_table_detail(id):
         changed = False
         allow_fixedcut_insert = request.form.get('allow_fixedcut_insert') == '1'
 
-        fixedcut_id_input = _to_text(request.form.get('fixedcutID', ''))
+        fixedcut_id_input = _normalize_fixedcut_id(request.form.get('fixedcutID', ''))
         if fixedcut_id_input != '' and person.fixedcutID != fixedcut_id_input:
             person.fixedcutID = fixedcut_id_input
             changed = True
@@ -931,7 +943,7 @@ def senkyo_person_table_detail(id):
                 person.store_date = parsed_store_date
                 changed = True
 
-        fixedcut_id_for_sync = _to_text(request.form.get('fixedcutID', ''))
+        fixedcut_id_for_sync = _normalize_fixedcut_id(request.form.get('fixedcutID', ''))
         if fixedcut_id_for_sync == '':
             fixedcut_id_for_sync = _to_text(person.fixedcutID)
 
@@ -1037,7 +1049,7 @@ def general_add():
         return render_template('general_add.html', savelist=savelist)
     
     # フォームデータを取得
-    form_id = (request.form.get("id") or "").strip()
+    form_id = _normalize_fixedcut_id(request.form.get("id"))
     form_midashi = request.form.get("midashi")
     form_Str = request.form.get("Str")
     form_colorUrl = request.files.get("colorUrl")
