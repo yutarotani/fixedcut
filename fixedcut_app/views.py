@@ -17,7 +17,8 @@ import csv
 
 @app.route('/')
 def index():
-    return render_template('index.html', name='Flask Beginner')
+    from fixedcut_app.views_index import index_handler
+    return index_handler()
 
 
 def _to_text(value):
@@ -505,17 +506,24 @@ def download_m_jyochu_excel():
     )
 
 
+@app.route('/m_jyochu_image_cnv/reset', methods=['POST'])
+def reset_m_jyochu_image_cnv_data():
+    try:
+        deleted_rows = db.session.query(MJyochuImageCnv).delete(synchronize_session=False)
+        db.session.commit()
+        flash('m_jyochu_image_cnvの全削除を実行しました')
+        flash(f'削除レコード数: {deleted_rows}件')
+    except Exception as exc:
+        db.session.rollback()
+        flash(f'※m_jyochu_image_cnv削除処理に失敗しました※ {exc}')
+
+    return redirect(url_for('index'))
+
+
 @app.route('/senkyo')
 def senkyo():
-    cd_dir = _xlsx_base_dir() / 'CD'
-    cd_excel_files = []
-    if cd_dir.exists():
-        for file_path in cd_dir.iterdir():
-            if file_path.is_file() and file_path.suffix.lower() in _senkyo_data_extensions():
-                cd_excel_files.append(file_path.name)
-
-    cd_excel_files.sort()
-    return render_template('senkyo.html', name='Senkyo page', cd_excel_files=cd_excel_files)
+    from fixedcut_app.views_senkyo import senkyo_handler
+    return senkyo_handler()
 
 
 def _save_excel_to_static_subdir(upload_file, sub_dir_name, default_name):
@@ -664,6 +672,8 @@ def senkyo_person_table(page=1):
     if request.method == 'POST' and request.form.get('action') == 'bulk_update':
         updated = 0
         invalid = 0
+        fixedcut_candidates = {}
+        allow_fixedcut_insert = request.form.get('allow_fixedcut_insert') == '1'
 
         person_ids = request.form.getlist('person_ids')
         for person_id_text in person_ids:
@@ -710,11 +720,48 @@ def senkyo_person_table(page=1):
             if changed:
                 updated += 1
 
+            fixedcut_id_for_sync = _to_text(request.form.get(f'fixedcutID_{person_id}', ''))
+            if fixedcut_id_for_sync == '':
+                fixedcut_id_for_sync = _to_text(rec.fixedcutID)
+
+            if fixedcut_id_for_sync:
+                fixedcut_candidates[fixedcut_id_for_sync] = {
+                    'midashi': _to_text(rec.name),
+                    'prodFlg': bool(_to_text(rec.MenName) and _to_text(rec.operater) and rec.store_date is not None),
+                }
+
+        existing_fixedcut_ids = []
+        inserted_fixedcut = 0
+        if fixedcut_candidates:
+            for fixedcut_id, payload in fixedcut_candidates.items():
+                exists = db.session.query(FixedCut.id).filter(FixedCut.id == fixedcut_id).first() is not None
+                if exists:
+                    existing_fixedcut_ids.append(fixedcut_id)
+                    continue
+
+                if allow_fixedcut_insert:
+                    db.session.add(FixedCut(
+                        id=fixedcut_id,
+                        midashi=payload['midashi'],
+                        Str='',
+                        colorUrl='',
+                        monoUrl='',
+                        GWFlg=False,
+                        prodFlg=payload['prodFlg'],
+                        OTFlg=False,
+                        comment='選挙顔写真固定カット',
+                    ))
+                    inserted_fixedcut += 1
+
         try:
             db.session.commit()
             flash(f'SenkyoPerson 差分更新完了: {updated}件')
             if invalid > 0:
                 flash(f'日時形式が不正で更新しなかった件数: {invalid}件')
+            if existing_fixedcut_ids:
+                flash(f'FixedCut既存ID: {len(existing_fixedcut_ids)}件')
+            if inserted_fixedcut > 0:
+                flash(f'FixedCut新規追加: {inserted_fixedcut}件')
         except Exception as exc:
             db.session.rollback()
             flash(f'※SenkyoPerson差分更新に失敗しました※ {exc}')
@@ -829,13 +876,117 @@ def senkyo_person_table(page=1):
     )
 
 
-@app.route('/senkyo_person_table_detail/<int:id>', methods=['GET'])
+@app.route('/senkyo_person_table_detail/<int:id>', methods=['GET', 'POST'])
 def senkyo_person_table_detail(id):
     person = db.session.query(SenkyoPerson).filter(SenkyoPerson.id == id).first()
     if person is None:
         return render_template('error_404.html'), 404
 
+    if request.method == 'POST':
+        invalid = 0
+        changed = False
+        allow_fixedcut_insert = request.form.get('allow_fixedcut_insert') == '1'
+
+        fixedcut_id_input = _to_text(request.form.get('fixedcutID', ''))
+        if fixedcut_id_input != '' and person.fixedcutID != fixedcut_id_input:
+            person.fixedcutID = fixedcut_id_input
+            changed = True
+
+        men_name_input = _to_text(request.form.get('MenName', ''))
+        if men_name_input != '' and person.MenName != men_name_input:
+            person.MenName = men_name_input
+            changed = True
+
+        operater_input = _to_text(request.form.get('operater', ''))
+        if operater_input != '' and person.operater != operater_input:
+            person.operater = operater_input
+            changed = True
+
+        output_flg_input = request.form.get('output_Flg') == '1'
+        current_output_flg = bool(person.output_Flg)
+        if current_output_flg != output_flg_input:
+            person.output_Flg = output_flg_input
+            changed = True
+
+        store_date_text = _to_text(request.form.get('store_date', ''))
+        if store_date_text != '':
+            parsed_store_date = _parse_datetime_local_or_none(store_date_text)
+            if parsed_store_date is None:
+                invalid += 1
+            elif person.store_date != parsed_store_date:
+                person.store_date = parsed_store_date
+                changed = True
+
+        fixedcut_id_for_sync = _to_text(request.form.get('fixedcutID', ''))
+        if fixedcut_id_for_sync == '':
+            fixedcut_id_for_sync = _to_text(person.fixedcutID)
+
+        existing_fixedcut_count = 0
+        inserted_fixedcut = 0
+        if fixedcut_id_for_sync:
+            exists = db.session.query(FixedCut.id).filter(FixedCut.id == fixedcut_id_for_sync).first() is not None
+            if exists:
+                existing_fixedcut_count = 1
+            elif allow_fixedcut_insert:
+                db.session.add(FixedCut(
+                    id=fixedcut_id_for_sync,
+                    midashi=_to_text(person.name),
+                    Str='',
+                    colorUrl='',
+                    monoUrl='',
+                    GWFlg=False,
+                    prodFlg=bool(_to_text(person.MenName) and _to_text(person.operater) and person.store_date is not None),
+                    OTFlg=False,
+                    comment='選挙顔写真固定カット',
+                ))
+                inserted_fixedcut = 1
+
+        try:
+            db.session.commit()
+            flash(f'SenkyoPerson 差分更新完了: {1 if changed else 0}件')
+            if invalid > 0:
+                flash(f'日時形式が不正で更新しなかった件数: {invalid}件')
+            if existing_fixedcut_count:
+                flash('FixedCut既存ID: 1件')
+            if inserted_fixedcut:
+                flash('FixedCut新規追加: 1件')
+        except Exception as exc:
+            db.session.rollback()
+            flash(f'※SenkyoPerson差分更新に失敗しました※ {exc}')
+
+        person = db.session.query(SenkyoPerson).filter(SenkyoPerson.id == id).first()
+
     return render_template('senkyo_person_table_detail.html', person=person)
+
+
+@app.route('/senkyo_person_delete/<int:id>', methods=['POST'])
+def senkyo_person_delete(id):
+    person = db.session.query(SenkyoPerson).filter(SenkyoPerson.id == id).first()
+    if person is None:
+        flash('※削除対象のSenkyoPersonレコードが見つかりません※')
+        return redirect(url_for('senkyo_person_table'))
+
+    delete_fixedcut_with_person = request.form.get('delete_fixedcut_with_person') == '1'
+    fixedcut_id = _to_text(person.fixedcutID)
+
+    try:
+        deleted_fixedcut = False
+        if delete_fixedcut_with_person and fixedcut_id:
+            fixedcut = db.session.query(FixedCut).filter(FixedCut.id == fixedcut_id).first()
+            if fixedcut is not None:
+                db.session.delete(fixedcut)
+                deleted_fixedcut = True
+
+        db.session.delete(person)
+        db.session.commit()
+        flash(f'SenkyoPerson {id} を削除しました')
+        if deleted_fixedcut:
+            flash(f'FixedCut {fixedcut_id} も削除しました')
+    except Exception as exc:
+        db.session.rollback()
+        flash(f'※SenkyoPerson削除に失敗しました※ {exc}')
+
+    return redirect(url_for('senkyo_person_table'))
 
 
 @app.route('/senkyo_sendgroup_table')
@@ -861,53 +1012,8 @@ def senkyo_serch():
 @app.route('/general', methods=['GET', 'POST'])
 @app.route('/general/<int:page>', methods=['GET', 'POST'])
 def general(page=1):
-    per_page = 100
-    
-    # 検索条件を取得（POSTまたはGETパラメータから）
-    res = {}
-    res["midashi"] = request.values.get("midashi", "")
-    res["ID"] = request.values.get("ID", "")
-    res["Str"] = request.values.get("Str", "")
-    res["GWFlg"] = request.values.get("GWFlg", "")
-    res["prodFlg"] = request.values.get("prodFlg", "")
-    res["OTFlg"] = request.values.get("OTFlg", "")
-    res["startdate"] = request.values.get("startdate", "")
-    res["enddate"] = request.values.get("enddate", "")
-
-    savelist = [res["midashi"], res["ID"], res["Str"],
-                res["GWFlg"], res["prodFlg"], res["OTFlg"],
-                res["startdate"], res["enddate"]]
-
-    # クエリ構築
-    query = db.session.query(FixedCut)
-    
-    # AND検索：固定カットID、仮見出し、一体化文字列
-    if res["ID"]:
-        query = query.filter(FixedCut.id.contains(res["ID"]))
-    if res["midashi"]:
-        query = query.filter(FixedCut.midashi.contains(res["midashi"]))
-    if res["Str"]:
-        query = query.filter(FixedCut.Str.contains(res["Str"]))
-    
-    # 追加フィルタ：GWFlg, prodFlg, OTFlg, startdate, enddate
-    if res["GWFlg"] == "on":
-        query = query.filter(FixedCut.GWFlg == True)
-    if res["prodFlg"] == "on":
-        query = query.filter(FixedCut.prodFlg == True)
-    if res["OTFlg"] == "on":
-        query = query.filter(FixedCut.OTFlg == True)
-    if res["startdate"]:
-        start_date = datetime.strptime(res["startdate"], '%Y-%m-%d')
-        query = query.filter(FixedCut.created_at >= start_date)
-    if res["enddate"]:
-        end_date = datetime.strptime(res["enddate"], '%Y-%m-%d')
-        query = query.filter(FixedCut.created_at <= end_date)
-    
-    # ページネーション適用
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    results = pagination.items
-    
-    return render_template('general.html', name='General page', results=results, savelist=savelist, pagination=pagination) 
+    from fixedcut_app.views_general import general_handler
+    return general_handler(page=page)
 
 
 @app.route('/general_add', methods=['GET', 'POST'])
@@ -1202,6 +1308,30 @@ def check_id(id):
         return {'exists': True}
     else:
         return {'exists': False}
+
+
+@app.route('/api/check_fixedcut_ids', methods=['POST'])
+def check_fixedcut_ids():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get('ids') or []
+
+    normalized_ids = []
+    seen = set()
+    for value in ids:
+        text = _to_text(value)
+        if text and text not in seen:
+            normalized_ids.append(text)
+            seen.add(text)
+
+    if not normalized_ids:
+        return {'existing_ids': [], 'missing_ids': []}
+
+    existing_rows = db.session.query(FixedCut.id).filter(FixedCut.id.in_(normalized_ids)).all()
+    existing_set = {row[0] for row in existing_rows}
+
+    existing_ids = [x for x in normalized_ids if x in existing_set]
+    missing_ids = [x for x in normalized_ids if x not in existing_set]
+    return {'existing_ids': existing_ids, 'missing_ids': missing_ids}
 
 
 @app.before_request

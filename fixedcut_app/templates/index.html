@@ -22,7 +22,17 @@ index
 	</form>
 
 	<a href="{{ url_for('download_m_jyochu_excel') }}" class="btn btn-success">m_jyochu_image_cnvをExcelでダウンロード</a>
+
+	<form action="{{ url_for('reset_m_jyochu_image_cnv_data') }}" method="POST" class="mt-3" onsubmit="return confirmResetMJyochu();">
+		<button type="submit" class="btn btn-danger">m_jyochu_image_cnvを全削除</button>
+	</form>
 </div>
+
+<script>
+function confirmResetMJyochu() {
+	return confirm('m_jyochu_image_cnvのレコードを全削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
+}
+</script>
 {% endblock %}
 
 {% block footer %}

@@ -100,6 +100,7 @@ SenkyoPerson Table
     </h5>
     <form id="bulkUpdateForm" action="{{ url_for('senkyo_person_table', page=pagination.page) }}" method="POST">
     <input type="hidden" name="action" value="bulk_update">
+    <input type="hidden" name="allow_fixedcut_insert" value="0">
     <input type="hidden" name="personID" value="{{ savelist[0] }}">
     <input type="hidden" name="syubetsu" value="{{ savelist[1] }}">
     <input type="hidden" name="senkyoku" value="{{ savelist[2] }}">
@@ -167,6 +168,77 @@ SenkyoPerson Table
         <button type="submit" class="btn btn-primary">ページ内レコード差分を更新</button>
     </div>
     </form>
+
+    <script>
+        async function beforeBulkUpdateSubmit(event) {
+            const form = event.target;
+            if (!form || form.id !== 'bulkUpdateForm') {
+                return;
+            }
+
+            const actionInput = form.querySelector('input[name="action"]');
+            if (!actionInput || actionInput.value !== 'bulk_update') {
+                return;
+            }
+
+            event.preventDefault();
+
+            const allowInsertInput = form.querySelector('input[name="allow_fixedcut_insert"]');
+            if (allowInsertInput) {
+                allowInsertInput.value = '0';
+            }
+
+            const idInputs = Array.from(form.querySelectorAll('input[name^="fixedcutID_"]'));
+            const fixedcutIds = [...new Set(idInputs.map((x) => (x.value || '').trim()).filter((x) => x !== ''))];
+
+            if (fixedcutIds.length === 0) {
+                form.submit();
+                return;
+            }
+
+            try {
+                const response = await fetch('{{ url_for("check_fixedcut_ids") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: fixedcutIds })
+                });
+
+                if (!response.ok) {
+                    alert('FixedCut確認に失敗しました。更新を中止します。');
+                    return;
+                }
+
+                const data = await response.json();
+                const existingIds = data.existing_ids || [];
+                const missingIds = data.missing_ids || [];
+
+                if (existingIds.length > 0) {
+                    alert('同様の固定カットIDの登録があります。\n' + existingIds.join(', ') + '\nSenkyoPersonの更新を続行します。');
+                }
+
+                if (missingIds.length > 0) {
+                    const ok = confirm('FixedCutに未登録の固定カットIDがあります。\n' + missingIds.join(', ') + '\n新規追加してよろしいですか？');
+                    if (!ok) {
+                        return;
+                    }
+                    if (allowInsertInput) {
+                        allowInsertInput.value = '1';
+                    }
+                }
+
+                form.submit();
+            } catch (error) {
+                alert('FixedCut確認中にエラーが発生しました。更新を中止します。');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const bulkForm = document.getElementById('bulkUpdateForm');
+            if (bulkForm) {
+                bulkForm.addEventListener('submit', beforeBulkUpdateSubmit);
+            }
+        });
+    </script>
 
     {% if pagination %}
     <nav aria-label="ページナビゲーション" class="mt-4">
