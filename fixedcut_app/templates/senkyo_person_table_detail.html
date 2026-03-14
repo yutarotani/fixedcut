@@ -91,7 +91,7 @@ SenkyoPerson Detail
             });
 
             if (!response.ok) {
-                alert('FixedCut確認に失敗しました。更新を中止します。');
+                alert('汎用固定カットマスタの確認に失敗しました。更新を中止します。');
                 return;
             }
 
@@ -100,11 +100,11 @@ SenkyoPerson Detail
             const missingIds = data.missing_ids || [];
 
             if (existingIds.length > 0) {
-                alert('同様の固定カットIDの登録があります。\n' + existingIds.join(', ') + '\nSenkyoPersonの更新を続行します。');
+                alert('同様の固定カットIDの登録があります。\n' + existingIds.join(', ') + '\n選挙候補者レコードの更新を続行します。');
             }
 
             if (missingIds.length > 0) {
-                const ok = confirm('FixedCutに未登録の固定カットIDがあります。\n' + missingIds.join(', ') + '\n新規追加してよろしいですか？');
+                const ok = confirm('汎用固定カットマスタに未登録の固定カットIDがあります。\n' + missingIds.join(', ') + '\n新規追加してよろしいですか？');
                 if (!ok) {
                     return;
                 }
@@ -115,7 +115,7 @@ SenkyoPerson Detail
 
             form.submit();
         } catch (error) {
-            alert('FixedCut確認中にエラーが発生しました。更新を中止します。');
+            alert('汎用固定カットマスタの確認中にエラーが発生しました。更新を中止します。');
         }
     }
 
@@ -156,9 +156,9 @@ SenkyoPerson Detail
 
                 if (exists) {
                     const ok = confirm(
-                        '同じ固定カットIDがFixedCutに存在します。\n' +
+                        '同じ固定カットIDが汎用固定カットマスタに存在します。\n' +
                         '固定カットID: ' + fixedcutId + '\n\n' +
-                        'このSenkyoPersonレコードとFixedCutレコードを削除しますか？'
+                        'この選挙候補者レコードと汎用固定カットマスタのレコードを削除しますか？'
                     );
                     if (!ok) {
                         return;
@@ -171,7 +171,7 @@ SenkyoPerson Detail
                 }
             }
 
-            const ok = confirm('このSenkyoPersonレコードを削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
+            const ok = confirm('この選挙候補者レコードを削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
             if (!ok) {
                 return;
             }

@@ -10,7 +10,7 @@ index
 
 {% block content %}
 <div class="container mt-3">
-	<h5>m_jyochu_image_cnv Excel連携</h5>
+	<h5>常駐イメージ変換マスタ連携</h5>
 	<p>Excel,CSVをアップロードして差分を追加・更新します。</p>
 
 	<form action="{{ url_for('upload_m_jyochu_excel') }}" method="POST" enctype="multipart/form-data" class="mb-3">
@@ -21,20 +21,16 @@ index
 		<button type="submit" class="btn btn-primary">差分取込を実行</button>
 	</form>
 
-	<a href="{{ url_for('download_m_jyochu_excel') }}" class="btn btn-success">m_jyochu_image_cnvをExcelでダウンロード</a>
+	<a href="{{ url_for('download_m_jyochu_excel') }}" class="btn btn-success">常駐イメージ変換マスタをExcelでダウンロード</a>
 
 	<form action="{{ url_for('reset_m_jyochu_image_cnv_data') }}" method="POST" class="mt-3" onsubmit="return confirmResetMJyochu();">
-		<button type="submit" class="btn btn-danger">m_jyochu_image_cnvを全削除</button>
+		<button type="submit" class="btn btn-danger">常駐イメージ変換マスタを全削除</button>
 	</form>
 </div>
 
 <script>
 function confirmResetMJyochu() {
-	return confirm('m_jyochu_image_cnvのレコードを全削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
+	return confirm('常駐イメージ変換マスタのレコードを全削除します。\nこの操作は元に戻せません。実行してよろしいですか？');
 }
 </script>
-{% endblock %}
-
-{% block footer %}
-IndexFooter
 {% endblock %}

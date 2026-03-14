@@ -1,0 +1,12 @@
+# FixedCut application dependencies
+# Install: pip install -r requirements.txt
+
+Flask
+Flask-SQLAlchemy
+SQLAlchemy
+Werkzeug
+openpyxl
+xlrd
+
+# Needed only when generating cert.pem/key.pem with create_cert.py
+cryptography

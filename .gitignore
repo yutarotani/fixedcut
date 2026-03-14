@@ -3,13 +3,9 @@
 *.csv
 *.db
 *.log
-*.txt
 *.jpeg
 *.jpg
 *.eps
 *.svg
 *.tiff
 *.pem
-
-# 作業用コピーは管理対象外
-fixedcut - コピー/

@@ -6,6 +6,10 @@
     padding-top: 30px;
 }
 
+.pad-above2 {
+    padding-top: 46px;
+}
+
 .not-solve {
     color: red;
 }

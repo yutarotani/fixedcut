@@ -17,21 +17,34 @@ app.secret_key = 'secret_key'
 
 db = SQLAlchemy(app)
 
-# ログ設定
-if not os.path.exists('logs'):
-    os.mkdir('logs')
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 
-handler = RotatingFileHandler('logs/app.log', maxBytes=1000000, backupCount=5)
-formatter = logging.Formatter(
-    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
-handler.setFormatter(formatter)
-handler.setLevel(logging.INFO)
 
-app.logger.addHandler(handler)
-app.logger.setLevel(logging.INFO)
+def _configure_logging():
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+    # 同一ファイルへの重複ハンドラ追加を避ける。
+    for existing in app.logger.handlers:
+        if isinstance(existing, RotatingFileHandler) and getattr(existing, 'baseFilename', None) == LOG_FILE:
+            return
+
+    handler = RotatingFileHandler(LOG_FILE, maxBytes=1000000, backupCount=5)
+    formatter = logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    )
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+
+    app.logger.addHandler(handler)
+    app.logger.setLevel(logging.INFO)
+
+
+_configure_logging()
 
 # 古いログファイルを削除する関数
-def cleanup_old_logs(log_dir='logs', days=7):
+def cleanup_old_logs(log_dir=LOG_DIR, days=7):
     """
     指定日数以上前のログファイルを削除
     """
@@ -56,16 +69,3 @@ app.logger.info('Application startup')
 from.models import fixedcut, m_jyochu_image_cnv, senkyo_person, senkyo_sendgroup
 
 import fixedcut_app.views
-
-if not os.path.exists('logs'):
-    os.mkdir('logs')
-
-handler = RotatingFileHandler('logs/app.log', maxBytes=1000000, backupCount=5)
-formatter = logging.Formatter(
-    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
-handler.setFormatter(formatter)
-handler.setLevel(logging.INFO)
-
-app.logger.addHandler(handler)
-app.logger.setLevel(logging.INFO)
-app.logger.info('Application startup')

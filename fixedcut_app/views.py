@@ -51,6 +51,22 @@ def _xlsx_base_dir():
     return pathlib.Path(app.static_folder) / 'xlsx'
 
 
+def _trim_uploaded_files(base_dir, trigger_count=10, keep_count=5):
+    files = [p for p in base_dir.iterdir() if p.is_file()]
+    if len(files) <= trigger_count:
+        return 0
+
+    files.sort(key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
+    delete_targets = files[keep_count:]
+
+    deleted = 0
+    for file_path in delete_targets:
+        file_path.unlink()
+        deleted += 1
+
+    return deleted
+
+
 def _senkyo_data_extensions():
     return {'.xlsx', '.xlsm', '.xls', '.csv'}
 
@@ -311,7 +327,7 @@ def upload_m_jyochu_excel():
         flash('※Excel/CSV形式(.xlsx/.xlsm/.xls/.csv)のファイルを選択してください※')
         return redirect(url_for('index'))
 
-    xlsx_dir = _xlsx_base_dir()
+    xlsx_dir = _xlsx_base_dir() / 'm_jyochu_image_cnv'
     xlsx_dir.mkdir(parents=True, exist_ok=True)
 
     safe_name = secure_filename(upload_file.filename)
@@ -322,6 +338,13 @@ def upload_m_jyochu_excel():
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     save_path = xlsx_dir / f'{timestamp}_{safe_name}'
     upload_file.save(save_path)
+
+    try:
+        deleted = _trim_uploaded_files(xlsx_dir, trigger_count=10, keep_count=5)
+        if deleted > 0:
+            flash(f'm_jyochu_image_cnvフォルダの古いファイルを{deleted}件削除しました（最新5件を保持）')
+    except Exception as exc:
+        flash(f'※m_jyochu_image_cnvフォルダのファイル整理に失敗しました※ {exc}')
 
     if ext == '.csv':
         rows = None
@@ -543,7 +566,7 @@ def senkyo_sendgroup_text():
     return senkyo_sendgroup_text_handler()
 
 
-def _save_excel_to_static_subdir(upload_file, sub_dir_name, default_name):
+def _save_excel_to_static_subdir(upload_file, sub_dir_name, default_name, cleanup_trigger_count=None, cleanup_keep_count=None):
     if not upload_file or upload_file.filename == '':
         return False, '※Excelファイルを選択してください※'
 
@@ -561,6 +584,14 @@ def _save_excel_to_static_subdir(upload_file, sub_dir_name, default_name):
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     save_path = base_dir / f'{timestamp}_{safe_name}'
     upload_file.save(save_path)
+
+    if cleanup_trigger_count is not None and cleanup_keep_count is not None:
+        try:
+            deleted = _trim_uploaded_files(base_dir, trigger_count=cleanup_trigger_count, keep_count=cleanup_keep_count)
+            if deleted > 0:
+                flash(f'{sub_dir_name}フォルダの古いファイルを{deleted}件削除しました（最新{cleanup_keep_count}件を保持）')
+        except Exception as exc:
+            flash(f'※{sub_dir_name}フォルダのファイル整理に失敗しました※ {exc}')
 
     return True, f'保存完了: {save_path}'
 
@@ -587,7 +618,13 @@ def upload_senkyo_cd_excel():
 @app.route('/senkyo/upload_sendgroup', methods=['POST'])
 def upload_senkyo_sendgroup_excel():
     upload_file = request.files.get('sendgroupExcelFile')
-    ok, message = _save_excel_to_static_subdir(upload_file, 'sendgroup', 'sendgroup_upload.xlsx')
+    ok, message = _save_excel_to_static_subdir(
+        upload_file,
+        'sendgroup',
+        'sendgroup_upload.xlsx',
+        cleanup_trigger_count=10,
+        cleanup_keep_count=5,
+    )
     flash(message)
 
     if ok:
@@ -804,6 +841,8 @@ def senkyo_person_table(page=1):
         "CD_No": request.values.get("CD_No", ""),
         "startdate": request.values.get("startdate", ""),
         "enddate": request.values.get("enddate", ""),
+        "sort_by": request.values.get("sort_by", "id"),
+        "sort_dir": request.values.get("sort_dir", "asc"),
     }
 
     savelist = [
@@ -868,7 +907,38 @@ def senkyo_person_table(page=1):
         end_date = datetime.strptime(res["enddate"], '%Y-%m-%d')
         query = query.filter(SenkyoPerson.created_at <= end_date)
 
-    pagination = query.order_by(SenkyoPerson.id.asc()).paginate(page=page, per_page=per_page, error_out=False)
+    sortable_columns = {
+        "id": SenkyoPerson.id,
+        "syubetu": SenkyoPerson.syubetu,
+        "senkyoku": SenkyoPerson.senkyoku,
+        "senkyokuNo": SenkyoPerson.senkyokuNo,
+        "sendGroup": SenkyoPerson.sendGroup,
+        "hirei": SenkyoPerson.hirei,
+        "name": SenkyoPerson.name,
+        "hurigana": SenkyoPerson.hurigana,
+        "seibetsu": SenkyoPerson.seibetsu,
+        "seito": SenkyoPerson.seito,
+        "genshinbetu": SenkyoPerson.genshinbetu,
+        "CD_No": SenkyoPerson.CD_No,
+        "fixedcutID": SenkyoPerson.fixedcutID,
+        "MenName": SenkyoPerson.MenName,
+        "store_date": SenkyoPerson.store_date,
+        "operater": SenkyoPerson.operater,
+        "output_Flg": SenkyoPerson.output_Flg,
+        "created_at": SenkyoPerson.created_at,
+        "updated_at": SenkyoPerson.updated_at,
+    }
+
+    sort_by = res["sort_by"] if res["sort_by"] in sortable_columns else "id"
+    sort_dir = "desc" if res["sort_dir"] == "desc" else "asc"
+    sort_column = sortable_columns[sort_by]
+
+    if sort_dir == "desc":
+        query = query.order_by(sort_column.desc(), SenkyoPerson.id.asc())
+    else:
+        query = query.order_by(sort_column.asc(), SenkyoPerson.id.asc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     person_rows = pagination.items
 
     person_columns = [
@@ -899,6 +969,8 @@ def senkyo_person_table(page=1):
         person_columns=person_columns,
         savelist=savelist,
         pagination=pagination,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
     )
 
 
@@ -1127,19 +1199,19 @@ def general_add():
         )
         db.session.add(fixedcut)
 
-        # m_jyochu_image_cnv は fixed_cut_img_explanation を基準に分岐
-        matched_jyochu = db.session.query(MJyochuImageCnv).filter(
-            MJyochuImageCnv.fixed_cut_img_explanation == (form_Str or "")
-        ).first()
+        # GW登録対象の場合のみ、固定カットIDで m_jyochu_image_cnv を追加または更新する。
+        if form_GWFlg:
+            matched_jyochu = db.session.query(MJyochuImageCnv).filter(
+                MJyochuImageCnv.fixed_cut_id == form_id
+            ).first()
 
-        if matched_jyochu is None:
-            new_jyochu = MJyochuImageCnv(
-                fixed_cut_id=form_id,
-                fixed_cut_img_explanation=form_Str or "",
-            )
-            db.session.add(new_jyochu)
-        else:
-            matched_jyochu.fixed_cut_img_explanation = form_Str or ""
+            if matched_jyochu is None:
+                db.session.add(MJyochuImageCnv(
+                    fixed_cut_id=form_id,
+                    fixed_cut_img_explanation=form_Str or "",
+                ))
+            else:
+                matched_jyochu.fixed_cut_img_explanation = form_Str or ""
 
         db.session.commit()
 
@@ -1185,6 +1257,7 @@ def general_detail(id):
         form_prodFlg = request.form.get("prodFlg") == "on"
         form_OTFlg = request.form.get("OTFlg") == "on"
         form_comment = request.form.get("comment")
+        jyochu_update_decision = (request.form.get("jyochu_update_decision") or "").strip().lower()
 
         try:
             # 既存レコードを取得
@@ -1203,10 +1276,15 @@ def general_detail(id):
             fixedcut.OTFlg = form_OTFlg
             fixedcut.comment = form_comment
 
-            # 同一固定カットIDが m_jyochu_image_cnv に存在する場合は、説明を一体化時文字列で同期
+            # 同一固定カットIDが m_jyochu_image_cnv に存在する場合は、確認結果に応じて更新可否を分岐する。
             jyochu = db.session.query(MJyochuImageCnv).filter(MJyochuImageCnv.fixed_cut_id == id).first()
             if jyochu:
-                jyochu.fixed_cut_img_explanation = form_Str or ""
+                if jyochu_update_decision == 'skip':
+                    fixedcut.GWFlg = False
+                    flash('m_jyochu_image_cnv は更新しませんでした。GW登録対象をOFFに変更しました。')
+                else:
+                    jyochu.fixed_cut_img_explanation = form_Str or ""
+                    flash('同一固定カットIDが m_jyochu_image_cnv に存在したため、画像説明を更新しました。')
 
             db.session.commit()
 
@@ -1334,6 +1412,12 @@ def check_id(id):
         return {'exists': True}
     else:
         return {'exists': False}
+
+
+@app.route('/api/check_m_jyochu_image_cnv/<string:fixed_cut_id>')
+def check_m_jyochu_image_cnv(fixed_cut_id):
+    record = db.session.query(MJyochuImageCnv).filter(MJyochuImageCnv.fixed_cut_id == fixed_cut_id).first()
+    return {'exists': record is not None}
 
 
 @app.route('/api/check_fixedcut_ids', methods=['POST'])
