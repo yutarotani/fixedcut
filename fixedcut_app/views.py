@@ -95,25 +95,23 @@ def _match_sendgroup_value(syubetu, senkyoku, senkyoku_no_num, hirei):
     if not rows:
         return ''
 
-    target_area = _normalize_area_text(hirei if syubetu == '比例' else senkyoku)
-    fallback_area = _normalize_area_text(senkyoku if syubetu == '比例' else hirei)
+    area_candidates = []
+    for raw in (senkyoku, hirei):
+        normalized = _normalize_area_text(raw)
+        if normalized and normalized not in area_candidates:
+            area_candidates.append(normalized)
 
     # 1) area + 小選挙区番号 の一致を優先
-    if target_area and senkyoku_no_num is not None and syubetu != '比例':
-        for row in rows:
-            if _normalize_area_text(row.area) == target_area and row.syosenkyoNum == senkyoku_no_num:
-                return _to_text(row.sendGroup)
+    if senkyoku_no_num is not None:
+        for area in area_candidates:
+            for row in rows:
+                if _normalize_area_text(row.area) == area and row.syosenkyoNum == senkyoku_no_num:
+                    return _to_text(row.sendGroup)
 
     # 2) area の一致で決定（要件: SenkyoSendGroup.area を参照して sendGroup を設定）
-    if target_area:
+    for area in area_candidates:
         for row in rows:
-            if _normalize_area_text(row.area) == target_area:
-                return _to_text(row.sendGroup)
-
-    # 3) もう一方の area 候補もフォールバック参照
-    if fallback_area:
-        for row in rows:
-            if _normalize_area_text(row.area) == fallback_area:
+            if _normalize_area_text(row.area) == area:
                 return _to_text(row.sendGroup)
 
     return ''
@@ -158,13 +156,11 @@ def _upsert_senkyo_person_from_cd_file(file_path):
             continue
 
         syubetu = _to_text(row[1])
-        if syubetu in ('選挙区', '重複'):
-            senkyoku = _normalize_senkyoku(row[3])
-        else:
-            senkyoku = ''
+        # 種別文字列に依存せず、候補エリアとして選挙区列を利用する。
+        senkyoku = _normalize_senkyoku(row[3])
 
         senkyoku_no_num = _to_int_or_none(row[2])
-        if syubetu == '比例' or senkyoku_no_num is None:
+        if senkyoku_no_num is None:
             senkyoku_no = ''
         else:
             senkyoku_no = f'{senkyoku_no_num}区'
@@ -508,11 +504,20 @@ def download_m_jyochu_excel():
 
 @app.route('/m_jyochu_image_cnv/reset', methods=['POST'])
 def reset_m_jyochu_image_cnv_data():
+    m_jyochu_dir = _xlsx_base_dir() / 'm_jyochu_image_cnv'
+    deleted_files = 0
+
     try:
+        if m_jyochu_dir.exists():
+            for file_path in m_jyochu_dir.glob('*'):
+                if file_path.is_file():
+                    file_path.unlink()
+                    deleted_files += 1
+
         deleted_rows = db.session.query(MJyochuImageCnv).delete(synchronize_session=False)
         db.session.commit()
-        flash('m_jyochu_image_cnvの全削除を実行しました')
-        flash(f'削除レコード数: {deleted_rows}件')
+        flash('m_jyochu_image_cnvのフォルダ内ファイル削除と全削除を実行しました')
+        flash(f'削除ファイル数: {deleted_files}件 / 削除レコード数: {deleted_rows}件')
     except Exception as exc:
         db.session.rollback()
         flash(f'※m_jyochu_image_cnv削除処理に失敗しました※ {exc}')
@@ -652,11 +657,20 @@ def reset_cd_person_data():
 
 @app.route('/senkyo/reset_sendgroup', methods=['POST'])
 def reset_sendgroup_data():
+    sendgroup_dir = _xlsx_base_dir() / 'sendgroup'
+    deleted_files = 0
+
     try:
+        if sendgroup_dir.exists():
+            for file_path in sendgroup_dir.glob('*'):
+                if file_path.is_file():
+                    file_path.unlink()
+                    deleted_files += 1
+
         deleted_rows = db.session.query(SenkyoSendGroup).delete(synchronize_session=False)
         db.session.commit()
-        flash('SenkyoSendGroupのレコード全削除を実行しました')
-        flash(f'削除レコード数: {deleted_rows}件')
+        flash('sendgroupフォルダ内ファイル削除とSenkyoSendGroup全削除を実行しました')
+        flash(f'削除ファイル数: {deleted_files}件 / 削除レコード数: {deleted_rows}件')
     except Exception as exc:
         db.session.rollback()
         flash(f'※SenkyoSendGroup削除処理に失敗しました※ {exc}')
