@@ -1,11 +1,11 @@
 {% extends 'layout.html' %}
 
 {% block title %}
-SenkyoPerson Table
+登録済み選挙候補者 全件表示
 {% endblock %}
 
 {% block header %}
-<h3>登録済み候補者 全件表示</h3>
+<h3>登録済み選挙候補者 全件表示</h3>
 {% endblock %}
 
 {% block serchbar %}
@@ -45,14 +45,14 @@ SenkyoPerson Table
                 <input name="CD_No" type="text" class="form-control" id="CD_No" value="{{ savelist[7] }}">
             </li>
             <li class="nav-item">
-                <label for="startdate">開始日時:</label>
+                <label for="startdate">開始日時(作成日時):</label>
                 <input name="startdate" type="date" class="form-control" id="startdate" value="{{ savelist[8] }}">
             </li>
             <li class="nav-item pad-above">
                 <h4>～</h4>
             </li>
             <li class="nav-item ">
-                <label for="enddate">終了日時:</label>
+                <label for="enddate">終了日時(作成日時):</label>
                 <input name="enddate" type="date" class="form-control" id="enddate" value="{{ savelist[9] }}">
             </li>
             <li class="nav-item pad-above">
@@ -86,6 +86,12 @@ SenkyoPerson Table
 
 
 {% block content %}
+<div class="caution">
+    <P>※注意※</p>
+    <p>選挙出力フラグのチェックボックスはオンの場合、選挙システム向けの固定カットテーブルの出力対象にするという意図になります。</p>
+    <p>テーブルについては<a href="{{ url_for('senkyo_sendgroup_text') }}">こちらのページ</a>に順次更新して表示されるようにしています。</p>
+</div>
+
 <div class="mb-2">
     <button type="submit" form="bulkUpdateForm" class="btn btn-primary">ページ内レコード差分を更新</button>
 </div>

@@ -14,7 +14,7 @@ def senkyo_handler():
                 cd_excel_files.append(file_path.name)
 
     cd_excel_files.sort()
-    return render_template('senkyo.html', name='Senkyo page', cd_excel_files=cd_excel_files)
+    return render_template('senkyo.html', name='選挙顔写真固定カット処理メニュー', cd_excel_files=cd_excel_files)
 
 
 def _to_text(value):

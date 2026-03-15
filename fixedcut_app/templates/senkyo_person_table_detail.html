@@ -1,14 +1,20 @@
 {% extends 'layout.html' %}
 
 {% block title %}
-SenkyoPerson Detail
+選挙候補者登録データ詳細: {{ person.id }}
 {% endblock %}
 
 {% block header %}
-<h3>SenkyoPerson 詳細: {{ person.id }}</h3>
+<h3>選挙候補者登録データ詳細: {{ person.id }}</h3>
 {% endblock %}
 
 {% block content %}
+<div class="caution">
+    <P>※注意※</p>
+    <p>選挙出力フラグのチェックボックスはオンの場合、選挙システム向けの固定カットテーブルの出力対象にするという意図になります。</p>
+    <p>テーブルについては<a href="{{ url_for('senkyo_sendgroup_text') }}">こちらのページ</a>に順次更新して表示されるようにしています。</p>
+</div>
+
 <div class="container mt-3">
     <p>対象1レコードの詳細情報です。</p>
     <div class="table-responsive">

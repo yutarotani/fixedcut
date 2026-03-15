@@ -37,6 +37,8 @@
         <div class="pad">
             {% block content %}{% endblock %}
         </div>
+
+        {% block caution %}{% endblock %}
         
         <dev class="pad">
             {% with messages = get_flashed_messages() %}

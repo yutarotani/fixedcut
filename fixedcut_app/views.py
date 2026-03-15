@@ -1099,14 +1099,6 @@ def senkyo_sendgroup_table():
     )
 
 
-@app.route('/senkyo_serch', methods=['POST'])
-def senkyo_serch():
-    print("データを受け取りました")
-    req = request.form["ID"]
-    print(req)
-    return f'POSTdata:{req}' 
-
-
 @app.route('/general', methods=['GET', 'POST'])
 @app.route('/general/<int:page>', methods=['GET', 'POST'])
 def general(page=1):

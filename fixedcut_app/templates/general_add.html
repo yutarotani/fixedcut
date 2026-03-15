@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block title %}
-汎用固定カット処理を行うページです
+汎用固定カット追加
 {% endblock %}
 
 {% block header %}
@@ -10,6 +10,14 @@
 
 {% block content %}
 <h3>・<a href="/general">固定カットを検索する</a></h3>
+{% endblock %}
+
+{% block caution %}
+<div class="caution">
+    <P>※注意※</p>
+    <p>GW登録対象のチェックボックスはオンの場合、読売報知民友の三社に関わるマスタへの変更を行うという意図になります。</p>
+    <p>対象は常駐イメージ変換マスタで、統合編集ＧＷに対して固定カットＩＤと一体化文字列の設定を行いたい場合のみチェックして下さい。</p>
+</div>
 {% endblock %}
 
 {% block serch_result %}
