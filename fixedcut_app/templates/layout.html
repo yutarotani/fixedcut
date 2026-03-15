@@ -14,13 +14,19 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light pad">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" href="/">常駐イメージ変換マスタ操作</a>
+                    <a class="nav-link" href="/">常駐イメージ変換マスタ登録・ダウンロード</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/general">汎用固定カット処理</a>
+                    <a class="nav-link" href="/general">汎用固定カット検索</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/senkyo">選挙処理ページ</a>
+                    <a class="nav-link" href="/senkyo">選挙処理用マスタ登録・ダウンロード</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('senkyo_person_table') }}">登録済み選挙候補者検索</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('senkyo_sendgroup_text') }}">選挙システム固定カットテーブル</a>
                 </li>
             </ul>
         </nav>

@@ -1,16 +1,22 @@
 {% extends 'layout.html' %}
 
 {% block title %}
-常駐イメージ変換マスタ操作
+常駐イメージ変換マスタ登録・ダウンロード
 {% endblock %}
 
 {% block header %}
-<h3>常駐イメージ変換マスタ操作</h3>
+<h3>常駐イメージ変換マスタ登録・ダウンロード</h3>
 {% endblock %}
 
 {% block content %}
+<div class="caution">
+    <P>※注意※</p>
+    <p>マスタのアップロード・ダウンロードの前には、必ず最新版の常駐イメージ変換マスタのリリースがなかったかを確認してください。</p>
+    <p>最新リリース版と整合が取れない場合、こちらからダウンロードしたマスタが原因で読売・報知・民友すべてに影響しリリースバックが必要になります。</p>
+</div>
+
 <div class="container mt-3">
-	<h5>常駐イメージ変換マスタ連携</h5>
+	<h5>常駐イメージ変換マスタを登録してください</h5>
 	<p>Excel,CSVをアップロードして差分を追加・更新します。</p>
 
 	<form action="{{ url_for('upload_m_jyochu_excel') }}" method="POST" enctype="multipart/form-data" class="mb-3">

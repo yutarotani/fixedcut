@@ -1,11 +1,11 @@
 {% extends 'layout.html' %}
 
 {% block title %}
-登録済み選挙候補者 全件表示
+登録済み選挙候補者検索
 {% endblock %}
 
 {% block header %}
-<h3>登録済み選挙候補者 全件表示</h3>
+<h3>登録済み選挙候補者検索</h3>
 {% endblock %}
 
 {% block serchbar %}
@@ -88,8 +88,8 @@
 {% block content %}
 <div class="caution">
     <P>※注意※</p>
-    <p>選挙出力フラグのチェックボックスはオンの場合、選挙システム向けの固定カットテーブルの出力対象にするという意図になります。</p>
-    <p>テーブルについては<a href="{{ url_for('senkyo_sendgroup_text') }}">こちらのページ</a>に順次更新して表示されるようにしています。</p>
+    <p>・選挙出力フラグのチェックボックスはオンの場合、選挙システム向けの固定カットテーブルの出力対象にするという意図になります。<br>選挙システム向けの固定カットテーブルについては<a href="{{ url_for('senkyo_sendgroup_text') }}">こちらのページ</a>に順次更新して表示されるようにしています。</p>
+    <p>・固定カットIDを入力して更新をかけるとID重複を防ぐために汎用固定カット検索で表示する一覧に候補者名のレコードが作成されます。<br>レコード個別の編集ボタン遷移先から削除すると汎用固定カット検索の一覧からも削除されます。汎用固定カット検索のレコード詳細から削除した場合は、こちらの一覧からはレコード削除されません。</p>
 </div>
 
 <div class="mb-2">
@@ -149,7 +149,7 @@
         <table class="table table-striped table-hover table-sm">
             <thead>
                 <tr>
-                    <th>編集</th>
+                    <th></th>
                     <th>{{ sort_link('人物ID', 'id') }}</th>
                     <th>{{ sort_link('種別', 'syubetu') }}</th>
                     <th>{{ sort_link('選挙区', 'senkyoku') }}</th>
