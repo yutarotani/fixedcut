@@ -1,6 +1,6 @@
 FixedCut アプリ仕様書
 
-作成日: 2026-03-15
+更新日: 2026-03-16
 対象ディレクトリ: fixedcut
 
 ====================================
@@ -14,6 +14,7 @@ FixedCut アプリ仕様書
 - SenkyoPerson / SenkyoSendGroup の取込、検索、更新、削除、ダウンロード
 - 画像ファイルの保存および固定カットID単位管理
 - ログ出力(app.log)
+- Windows検証用セットアップ、Ubuntu本番用セットアップ、DB全削除・再作成スクリプトを提供
 
 ====================================
 2. 技術構成
@@ -23,6 +24,7 @@ FixedCut アプリ仕様書
 - DB: SQLite (fixedcut_app.db)
 - Excel/CSV処理: openpyxl, xlrd, csv
 - HTTPS開発用証明書生成(任意): cryptography
+- 本番用WSGIサーバ(Linux): gunicorn
 
 ====================================
 3. 主要データモデル
@@ -30,7 +32,7 @@ FixedCut アプリ仕様書
 3-1. FixedCut
 - 主キー: id(固定カットID)
 - 主な項目:
-  midashi, Str, colorUrl, monoUrl,
+  midashi, Str, men_name, colorUrl, monoUrl,
   GWFlg, prodFlg, OTFlg, comment,
   created_at, updated_at
 
@@ -47,7 +49,10 @@ FixedCut アプリ仕様書
 - 主キー: id(候補者番号)
 - 主な項目:
   syubetu, senkyoku, senkyokuNo, sendGroup, hirei,
-  name, hurigana, seito, CD_No, fixedcutID,
+  name, hurigana, name_jikai, kyodo_name,
+  seibetsu, seito, genshinbetu,
+  facefilename, photo_date,
+  CD_No, fixedcutID, updateCount,
   store_date, MenName, operater,
   output_Flg, created_at, updated_at
 
@@ -60,12 +65,12 @@ FixedCut アプリ仕様書
 4. 画面/ルート仕様(主要)
 ====================================
 4-1. 共通
-- GET / : トップページ
+- GET / : 常駐イメージ変換マスタ登録・ダウンロード画面
 
 4-2. FixedCut
 - GET/POST /general
   固定カット検索画面。
-  ID, 仮見出し, 一体化時文字列, フラグ, 日付範囲で絞込。
+  ID, 仮見出し, 一体化時文字列, 登録面名, フラグ, 日付範囲で絞込。
   カラム単位で昇順/降順ソート可能。
 
 - GET/POST /general_add
@@ -74,8 +79,8 @@ FixedCut アプリ仕様書
 
   追加時連携ルール:
   - GWFlg=True の場合のみ m_jyochu_image_cnv を固定カットIDで参照
-  - 同一固定カットIDなし: m_jyochu_image_cnv に新規追加
-  - 同一固定カットIDあり: m_jyochu_image_cnv を更新
+  - 同一固定カットIDなし: 確認後 m_jyochu_image_cnv に新規追加
+  - 同一固定カットIDあり: 確認後 m_jyochu_image_cnv を更新
   - 事前確認アラートでキャンセル時は GWFlg=False にして FixedCutのみ追加
 
 - GET/POST /general_detail/<id>
@@ -86,6 +91,8 @@ FixedCut アプリ仕様書
   - 同一IDがある場合は確認アラート表示
   - OK: m_jyochu_image_cnv.fixed_cut_img_explanation を更新
   - キャンセル: FixedCut.GWFlg=False に変更し m_jyochu_image_cnv は更新しない
+  - GWFlg=False の場合: m_jyochu_image_cnv の同一IDレコードを削除
+  - 同一IDがなく GWFlg=True かつ確認OK の場合: m_jyochu_image_cnv に新規追加
 
 - GET /general_delete/<id>
   固定カット削除。関連画像ディレクトリも削除。
@@ -106,6 +113,7 @@ FixedCut アプリ仕様書
 - GET /senkyo/sendgroup_text
 - POST /senkyo/upload_cd
   CDデータ取込 + SenkyoPerson Upsert
+  既存ID更新時は updateCount をカウントアップする。
 - POST /senkyo/upload_sendgroup
   sendgroup取込 + SenkyoSendGroup全置換取込
 - GET /senkyo/download_person_excel
@@ -114,11 +122,10 @@ FixedCut アプリ仕様書
 - POST /senkyo/reset_sendgroup
 - GET/POST /senkyo_person_table(/<page>)
   SenkyoPerson一覧表示。各カラム見出しクリックで昇順/降順ソート可能。
-  ソート対象: 人物ID, 種別, 選挙区, 選挙区番号, 配信グループ, 比例選挙区,
-              候補者氏名, ふりがな, 性別, 政党, 現新別, CD_No, 固定カットID,
-              登録先面名, 保存日時, 操作担当者, 選挙出力フラグ, 作成日時, 更新日時
   検索条件・ページング・差分更新実行時もソート条件を保持する。
+  ページ内差分更新で変更があったレコードは updateCount をカウントアップする。
 - GET/POST /senkyo_person_table_detail/<id>
+  SenkyoPersonの全カラムを表示。詳細更新で変更があった場合 updateCount をカウントアップする。
 - POST /senkyo_person_delete/<id>
 - GET /senkyo_sendgroup_table
 
@@ -167,8 +174,9 @@ FixedCut アプリ仕様書
   7日より古い app.log* を削除
 
 ====================================
-7. 起動・初期化
+7. 起動・運用スクリプト
 ====================================
+7-1. 開発起動(Windows/Linux共通)
 1) 依存ライブラリインストール
    pip install -r requirements.txt
 
@@ -184,6 +192,25 @@ FixedCut アプリ仕様書
 - 起動URL(既定):
   https://127.0.0.1:5000
 
+7-2. 本番起動(Ubuntu)
+- 本番依存:
+  requirements_production.txt (gunicorn)
+- セットアップ/サービス起動:
+  setup_ubuntu_production.sh
+
+7-3. 検証起動(Windows端末)
+- セットアップ/起動:
+  setup_windows_verify.bat
+- Python未導入時の自動導入とユーザー環境変数(PATH)設定を含む
+- gunicorn は利用しない
+
+7-4. DB全削除・再作成(保守)
+- スクリプト:
+  reset_db.py
+- 代表コマンド:
+  python reset_db.py --yes
+  python reset_db.py --yes --with-initial-m-jyochu
+
 ====================================
 8. 制約・注意事項
 ====================================
@@ -191,6 +218,7 @@ FixedCut アプリ仕様書
 - .xls 取込には xlrd が必要
 - 画像拡張子は指定形式のみ許可
 - 既存のテンプレート/ビューで日本語メッセージを使用
+- reset_db.py 実行時は全データが削除されるため、事前バックアップ必須
 
 ====================================
 9. ディレクトリ構成(ツリー)
@@ -200,8 +228,12 @@ fixedcut/
 |-- .gitignore
 |-- app_spec.txt
 |-- requirements.txt
+|-- requirements_production.txt
 |-- server.py
 |-- create_db.py
+|-- reset_db.py
+|-- setup_ubuntu_production.sh
+|-- setup_windows_verify.bat
 |-- create_test_data.py
 |-- create_m_jyochu_image_cnv_data.py
 |-- create_cert.py
@@ -231,7 +263,6 @@ fixedcut/
     |-- general_add.html
     |-- general_detail.html
     |-- senkyo.html
-    |-- senkyo_tables.html
     |-- senkyo_person_table.html
     |-- senkyo_person_table_detail.html
     |-- senkyo_sendgroup_table.html
