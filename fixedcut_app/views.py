@@ -818,16 +818,16 @@ def senkyo_person_table(page=1):
 
         try:
             db.session.commit()
-            flash(f'SenkyoPerson 差分更新完了: {updated}件')
+            flash(f'選挙候補者 差分更新完了: {updated}件')
             if invalid > 0:
                 flash(f'日時形式が不正で更新しなかった件数: {invalid}件')
             if existing_fixedcut_ids:
-                flash(f'FixedCut既存ID: {len(existing_fixedcut_ids)}件')
+                flash(f'汎用固定カット既存ID: {len(existing_fixedcut_ids)}件')
             if inserted_fixedcut > 0:
-                flash(f'FixedCut新規追加: {inserted_fixedcut}件')
+                flash(f'汎用固定カット新規追加: {inserted_fixedcut}件')
         except Exception as exc:
             db.session.rollback()
-            flash(f'※SenkyoPerson差分更新に失敗しました※ {exc}')
+            flash(f'※選挙候補者の差分更新に失敗しました※ {exc}')
         # 更新後は同一リクエスト内で再検索して最新状態を表示する。
 
     res = {
@@ -1041,16 +1041,16 @@ def senkyo_person_table_detail(id):
 
         try:
             db.session.commit()
-            flash(f'SenkyoPerson 差分更新完了: {1 if changed else 0}件')
+            flash(f'選挙候補者 差分更新完了: {1 if changed else 0}件')
             if invalid > 0:
                 flash(f'日時形式が不正で更新しなかった件数: {invalid}件')
             if existing_fixedcut_count:
-                flash('FixedCut既存ID: 1件')
+                flash('汎用固定カット既存ID: 1件')
             if inserted_fixedcut:
-                flash('FixedCut新規追加: 1件')
+                flash('汎用固定カット新規追加: 1件')
         except Exception as exc:
             db.session.rollback()
-            flash(f'※SenkyoPerson差分更新に失敗しました※ {exc}')
+            flash(f'※選挙候補者の差分更新に失敗しました※ {exc}')
 
         person = db.session.query(SenkyoPerson).filter(SenkyoPerson.id == id).first()
 
@@ -1274,9 +1274,19 @@ def general_detail(id):
                 if jyochu_update_decision == 'skip':
                     fixedcut.GWFlg = False
                     flash('m_jyochu_image_cnv は更新しませんでした。GW登録対象をOFFに変更しました。')
+
+                if not fixedcut.GWFlg:
+                    db.session.delete(jyochu)
+                    flash('GW登録対象がOFFのため、m_jyochu_image_cnv の同一固定カットIDレコードを削除しました。')
                 else:
                     jyochu.fixed_cut_img_explanation = form_Str or ""
                     flash('同一固定カットIDが m_jyochu_image_cnv に存在したため、画像説明を更新しました。')
+            elif fixedcut.GWFlg and jyochu_update_decision == 'add':
+                db.session.add(MJyochuImageCnv(
+                    fixed_cut_id=id,
+                    fixed_cut_img_explanation=form_Str or "",
+                ))
+                flash('m_jyochu_image_cnv に同一固定カットIDがなかったため、新規追加しました。')
 
             db.session.commit()
 

@@ -147,11 +147,23 @@
 function confirmDetailUpdate(event) {
     const hasJyochu = {{ 'true' if jyochu_result else 'false' }};
     const decisionInput = document.getElementById('jyochuUpdateDecision');
+    const gwInput = document.querySelector('input[name="GWFlg"]');
+    const gwChecked = gwInput ? gwInput.checked : false;
     if (decisionInput) {
         decisionInput.value = '';
     }
 
     if (!hasJyochu) {
+        if (gwChecked) {
+            const okToAdd = confirm(
+                '同じ固定カットIDが 常駐イメージ変換マスタ に存在しません。\n' +
+                'OKで新規追加します。\n\n' +
+                '追加してよろしいですか？'
+            );
+            if (okToAdd && decisionInput) {
+                decisionInput.value = 'add';
+            }
+        }
         return true;
     }
 
@@ -171,7 +183,6 @@ function confirmDetailUpdate(event) {
         return true;
     }
 
-    const gwInput = document.querySelector('input[name="GWFlg"]');
     if (gwInput) {
         gwInput.checked = false;
     }
