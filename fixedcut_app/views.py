@@ -33,6 +33,10 @@ def _normalize_fixedcut_id(value):
     return unicodedata.normalize('NFKC', _to_text(value))
 
 
+def _build_senkyo_fixedcut_midashi(name):
+    return f'選挙_{_to_text(name)}'
+
+
 def _normalize_area_text(value):
     # area照合のぶれを減らすため、全角/半角スペースを除去して比較する。
     return _to_text(value).replace('\u3000', '').replace(' ', '')
@@ -790,7 +794,7 @@ def senkyo_person_table(page=1):
 
             if fixedcut_id_for_sync:
                 fixedcut_candidates[fixedcut_id_for_sync] = {
-                    'midashi': _to_text(rec.name),
+                    'midashi': _build_senkyo_fixedcut_midashi(rec.name),
                     'prodFlg': bool(_to_text(rec.MenName) and _to_text(rec.operater) and rec.store_date is not None),
                 }
 
@@ -1029,7 +1033,7 @@ def senkyo_person_table_detail(id):
             elif allow_fixedcut_insert:
                 db.session.add(FixedCut(
                     id=fixedcut_id_for_sync,
-                    midashi=_to_text(person.name),
+                    midashi=_build_senkyo_fixedcut_midashi(person.name),
                     Str='',
                     colorUrl='',
                     monoUrl='',
