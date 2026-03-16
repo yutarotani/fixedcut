@@ -28,10 +28,14 @@
                 <label for="Str">一体化時文字列:</label>
                 <input name="Str" type="text" class="form-control" id="Str" value="{{ savelist[2] }}">
             </li>
+            <li class="nav-item">
+                <label for="men_name">登録面名:</label>
+                <input name="men_name" type="text" class="form-control" id="men_name" value="{{ savelist[3] or '' }}">
+            </li>
             <li class="nav-item pad">
                 <label for="GWFlg"><font color="red">ＧＷ登録対象:</font></label>
                 <br>
-                {% if savelist[3]=="on" %}
+                {% if savelist[4]=="on" %}
                 <input name="GWFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1" checked>
                 {% else %}
                 <input name="GWFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1">
@@ -40,7 +44,7 @@
             <li class="nav-item pad">
                 <label for="prodFlg">組版本番登録済み:</label>
                 <br>
-                {% if savelist[4]=="on" %}
+                {% if savelist[5]=="on" %}
                 <input name="prodFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1" checked>
                 {% else %}
                 <input name="prodFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1">
@@ -49,7 +53,7 @@
             <li class="nav-item pad">
                 <label for="OTFlg">組版ＯＴ登録済み:</label>
                 <br>
-                {% if savelist[5]=="on" %}
+                {% if savelist[6]=="on" %}
                 <input name="OTFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1" checked>
                 {% else %}
                 <input name="OTFlg" type="checkbox" class="form-check-input ms-auto" id="checkTab1">
@@ -57,14 +61,14 @@
             </li>
             <li class="nav-item pad">
                 <label for="startdate">開始日時(作成日時):</label>
-                <input name="startdate" type="date" class="form-control" id="startdate" value="{{ savelist[6] }}">
+                <input name="startdate" type="date" class="form-control" id="startdate" value="{{ savelist[7] }}">
             </li>
             <li class="nav-item pad-above">
                 <h4>～</h4>
             </li>
             <li class="nav-item ">
                 <label for="enddate">終了日時(作成日時):</label>
-                <input name="enddate" type="date" class="form-control" id="enddate" value="{{ savelist[7] }}">
+                <input name="enddate" type="date" class="form-control" id="enddate" value="{{ savelist[8] }}">
             </li>
             <li class="nav-item pad pad-above">
                 <button type="submit" class="btn btn-primary">検索</button>
@@ -82,6 +86,7 @@
         document.querySelector('input[name="ID"]').value = '';
         document.querySelector('input[name="midashi"]').value = '';
         document.querySelector('input[name="Str"]').value = '';
+        document.querySelector('input[name="men_name"]').value = '';
         document.querySelector('input[name="GWFlg"]').checked = false;
         document.querySelector('input[name="prodFlg"]').checked = false;
         document.querySelector('input[name="OTFlg"]').checked = false;
@@ -96,15 +101,16 @@
     {% set id_q = savelist[1] %}
     {% set midashi_q = savelist[0] %}
     {% set str_q = savelist[2] %}
-    {% set gw_q = savelist[3] %}
-    {% set prod_q = savelist[4] %}
-    {% set ot_q = savelist[5] %}
-    {% set start_q = savelist[6] %}
-    {% set end_q = savelist[7] %}
+    {% set men_name_q = savelist[3] %}
+    {% set gw_q = savelist[4] %}
+    {% set prod_q = savelist[5] %}
+    {% set ot_q = savelist[6] %}
+    {% set start_q = savelist[7] %}
+    {% set end_q = savelist[8] %}
 
     {% macro sort_link(label, key, text_color='') -%}
         {%- set next_dir = 'desc' if sort_by == key and sort_dir == 'asc' else 'asc' -%}
-        <a href="{{ url_for('general', page=1, midashi=midashi_q, ID=id_q, Str=str_q, GWFlg=gw_q, prodFlg=prod_q, OTFlg=ot_q, startdate=start_q, enddate=end_q, sort_by=key, sort_dir=next_dir) }}" {% if text_color %}style="color: {{ text_color }};"{% endif %}>
+        <a href="{{ url_for('general', page=1, midashi=midashi_q, ID=id_q, Str=str_q, men_name=men_name_q, GWFlg=gw_q, prodFlg=prod_q, OTFlg=ot_q, startdate=start_q, enddate=end_q, sort_by=key, sort_dir=next_dir) }}" {% if text_color %}style="color: {{ text_color }};"{% endif %}>
             {{ label }}
             {% if sort_by == key %}
                 {% if sort_dir == 'asc' %}
@@ -128,6 +134,7 @@
             <th>{{ sort_link('固定カットID', 'id') }}</th>
             <th>{{ sort_link('仮見出し', 'midashi') }}</th>
             <th>{{ sort_link('一体化時文字列', 'Str') }}</th>
+            <th>{{ sort_link('登録面名', 'men_name') }}</th>
             <th>{{ sort_link('カラー画像', 'colorUrl') }}</th>
             <th>{{ sort_link('モノクロ画像', 'monoUrl') }}</th>
             <th>{{ sort_link('ＧＷ登録対象', 'GWFlg', 'red') }}</th>
@@ -145,6 +152,7 @@
             <td class=table-data>{{ res.id }}</td>
             <td class=table-data>{{ res.midashi }}</td>
             <td class=table-data>{{ res.Str }}</td>
+            <td class=table-data>{{ res.men_name or '' }}</td>
             <td class=table-data>
                 {% if ".eps" in res.colorUrl %}
                 <a href="{{ url_for('download', filename=res.colorUrl) }}">ダウンロード</a></td>
@@ -205,7 +213,7 @@
         <ul class="pagination justify-content-center">
             {% if pagination.has_prev %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('general', page=pagination.prev_num, midashi=savelist[0], ID=savelist[1], Str=savelist[2], GWFlg=savelist[3], prodFlg=savelist[4], OTFlg=savelist[5], startdate=savelist[6], enddate=savelist[7], sort_by=sort_by, sort_dir=sort_dir) }}">前へ</a>
+                <a class="page-link" href="{{ url_for('general', page=pagination.prev_num, midashi=savelist[0], ID=savelist[1], Str=savelist[2], men_name=savelist[3], GWFlg=savelist[4], prodFlg=savelist[5], OTFlg=savelist[6], startdate=savelist[7], enddate=savelist[8], sort_by=sort_by, sort_dir=sort_dir) }}">前へ</a>
             </li>
             {% else %}
             <li class="page-item disabled">
@@ -221,7 +229,7 @@
                     </li>
                     {% else %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('general', page=page_num, midashi=savelist[0], ID=savelist[1], Str=savelist[2], GWFlg=savelist[3], prodFlg=savelist[4], OTFlg=savelist[5], startdate=savelist[6], enddate=savelist[7], sort_by=sort_by, sort_dir=sort_dir) }}">{{ page_num }}</a>
+                        <a class="page-link" href="{{ url_for('general', page=page_num, midashi=savelist[0], ID=savelist[1], Str=savelist[2], men_name=savelist[3], GWFlg=savelist[4], prodFlg=savelist[5], OTFlg=savelist[6], startdate=savelist[7], enddate=savelist[8], sort_by=sort_by, sort_dir=sort_dir) }}">{{ page_num }}</a>
                     </li>
                     {% endif %}
                 {% else %}
@@ -233,7 +241,7 @@
 
             {% if pagination.has_next %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('general', page=pagination.next_num, midashi=savelist[0], ID=savelist[1], Str=savelist[2], GWFlg=savelist[3], prodFlg=savelist[4], OTFlg=savelist[5], startdate=savelist[6], enddate=savelist[7], sort_by=sort_by, sort_dir=sort_dir) }}">次へ</a>
+                <a class="page-link" href="{{ url_for('general', page=pagination.next_num, midashi=savelist[0], ID=savelist[1], Str=savelist[2], men_name=savelist[3], GWFlg=savelist[4], prodFlg=savelist[5], OTFlg=savelist[6], startdate=savelist[7], enddate=savelist[8], sort_by=sort_by, sort_dir=sort_dir) }}">次へ</a>
             </li>
             {% else %}
             <li class="page-item disabled">

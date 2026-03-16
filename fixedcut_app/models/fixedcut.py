@@ -9,6 +9,7 @@ class FixedCut(db.Model):
     colorUrl = db.Column(db.String(100)) #カラー画像のURL
     monoUrl = db.Column(db.String(100)) #モノクロ画像のURL
     GWFlg = db.Column(db.Boolean, default=False) #GW登録対象
+    men_name = db.Column(db.String(30)) #登録面名
     prodFlg = db.Column(db.Boolean, default=False) #組版本番登録済みか
     OTFlg = db.Column(db.Boolean, default=False) #組版OT系登録済みか
     comment = db.Column(db.String(255)) #コメント

@@ -12,6 +12,7 @@ def general_handler(page=1):
     res['midashi'] = request.values.get('midashi', '')
     res['ID'] = request.values.get('ID', '')
     res['Str'] = request.values.get('Str', '')
+    res['men_name'] = request.values.get('men_name', '')
     res['GWFlg'] = request.values.get('GWFlg', '')
     res['prodFlg'] = request.values.get('prodFlg', '')
     res['OTFlg'] = request.values.get('OTFlg', '')
@@ -24,6 +25,7 @@ def general_handler(page=1):
         res['midashi'],
         res['ID'],
         res['Str'],
+        res['men_name'],
         res['GWFlg'],
         res['prodFlg'],
         res['OTFlg'],
@@ -39,6 +41,8 @@ def general_handler(page=1):
         query = query.filter(FixedCut.midashi.contains(res['midashi']))
     if res['Str']:
         query = query.filter(FixedCut.Str.contains(res['Str']))
+    if res['men_name']:
+        query = query.filter(FixedCut.men_name.contains(res['men_name']))
 
     if res['GWFlg'] == 'on':
         query = query.filter(FixedCut.GWFlg == True)
@@ -57,6 +61,7 @@ def general_handler(page=1):
         'id': FixedCut.id,
         'midashi': FixedCut.midashi,
         'Str': FixedCut.Str,
+        'men_name': FixedCut.men_name,
         'colorUrl': FixedCut.colorUrl,
         'monoUrl': FixedCut.monoUrl,
         'GWFlg': FixedCut.GWFlg,

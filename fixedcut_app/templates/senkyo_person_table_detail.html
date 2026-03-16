@@ -30,9 +30,13 @@
                     <tr><th>比例選挙区</th><td>{{ person.hirei }}</td></tr>
                     <tr><th>候補者氏名</th><td>{{ person.name }}</td></tr>
                     <tr><th>ふりがな</th><td>{{ person.hurigana }}</td></tr>
+                    <tr><th>氏名字解</th><td>{{ person.name_jikai or '' }}</td></tr>
+                    <tr><th>共同表記氏名</th><td>{{ person.kyodo_name or '' }}</td></tr>
                     <tr><th>性別</th><td>{{ person.seibetsu }}</td></tr>
                     <tr><th>政党</th><td>{{ person.seito }}</td></tr>
                     <tr><th>現新別</th><td>{{ person.genshinbetu }}</td></tr>
+                    <tr><th>顔写真ファイル名</th><td>{{ person.facefilename or '' }}</td></tr>
+                    <tr><th>撮影日</th><td>{{ person.photo_date if person.photo_date else '' }}</td></tr>
                     <tr><th>CD_No</th><td>{{ person.CD_No }}</td></tr>
                     <tr>
                         <th>固定カットID</th>
@@ -46,6 +50,7 @@
                         <th>保存日時</th>
                         <td><input type="datetime-local" class="form-control form-control-sm" name="store_date" value="{{ person.store_date.strftime('%Y-%m-%dT%H:%M') if person.store_date else '' }}"></td>
                     </tr>
+                    <tr><th>更新回数</th><td>{{ person.updateCount if person.updateCount is not none else '' }}</td></tr>
                     <tr>
                         <th>操作担当者</th>
                         <td><input type="text" class="form-control form-control-sm" name="operater" value="{{ person.operater or '' }}"></td>

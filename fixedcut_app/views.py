@@ -207,17 +207,17 @@ def _upsert_senkyo_person_from_cd_file(file_path):
             'photo_date': _parse_date_or_none(row[15]),
             'CD_No': _to_text(row[14]),
             'fixedcutID': '',
-            'updateCount': 0,
         }
 
         record = db.session.query(SenkyoPerson).filter(SenkyoPerson.id == personid).first()
         if record is None:
-            record = SenkyoPerson(id=personid, **payload)
+            record = SenkyoPerson(id=personid, updateCount=0, **payload)
             db.session.add(record)
             inserted += 1
         else:
             for key, value in payload.items():
                 setattr(record, key, value)
+            record.updateCount = (record.updateCount or 0) + 1
             updated += 1
 
     return inserted, updated, skipped
@@ -781,6 +781,7 @@ def senkyo_person_table(page=1):
                     changed = True
 
             if changed:
+                rec.updateCount = (rec.updateCount or 0) + 1
                 updated += 1
 
             fixedcut_id_for_sync = _normalize_fixedcut_id(request.form.get(f'fixedcutID_{person_id}', ''))
@@ -1040,6 +1041,8 @@ def senkyo_person_table_detail(id):
                 inserted_fixedcut = 1
 
         try:
+            if changed:
+                person.updateCount = (person.updateCount or 0) + 1
             db.session.commit()
             flash(f'選挙候補者 差分更新完了: {1 if changed else 0}件')
             if invalid > 0:
@@ -1109,13 +1112,14 @@ def general(page=1):
 @app.route('/general_add', methods=['GET', 'POST'])
 def general_add():
     if request.method == 'GET':
-        savelist = ["","","","","","","","",""]
+        savelist = ["","","","","","","","","",""]
         return render_template('general_add.html', savelist=savelist)
     
     # フォームデータを取得
     form_id = _normalize_fixedcut_id(request.form.get("id"))
     form_midashi = request.form.get("midashi")
     form_Str = request.form.get("Str")
+    form_men_name = request.form.get("men_name") or ""
     form_colorUrl = request.files.get("colorUrl")
     form_monoUrl = request.files.get("monoUrl")
     form_GWFlg = request.form.get("GWFlg") == "on"
@@ -1123,7 +1127,7 @@ def general_add():
     form_OTFlg = request.form.get("OTFlg") == "on"
     form_comment = request.form.get("comment")
 
-    savelist = [form_id, form_midashi, form_Str, form_colorUrl, form_monoUrl,
+    savelist = [form_id, form_midashi, form_Str, form_men_name, form_colorUrl, form_monoUrl,
                 form_GWFlg, form_prodFlg, form_OTFlg, form_comment]
 
     # 固定カットIDは必須
@@ -1182,6 +1186,7 @@ def general_add():
             id=form_id,
             midashi=form_midashi,
             Str=form_Str,
+            men_name=form_men_name,
             colorUrl=f'img/{form_id}/color/{color_name}' if color_name else "",
             monoUrl=f'img/{form_id}/mono/{mono_name}' if mono_name else "",
             GWFlg=form_GWFlg,
@@ -1245,6 +1250,7 @@ def general_detail(id):
         # フォームデータを取得（IDは変更しない）
         form_midashi = request.form.get("midashi")
         form_Str = request.form.get("Str")
+        form_men_name = request.form.get("men_name") or ""
         form_GWFlg = request.form.get("GWFlg") == "on"
         form_prodFlg = request.form.get("prodFlg") == "on"
         form_OTFlg = request.form.get("OTFlg") == "on"
@@ -1263,6 +1269,7 @@ def general_detail(id):
             # レコード更新（ID以外）
             fixedcut.midashi = form_midashi
             fixedcut.Str = form_Str
+            fixedcut.men_name = form_men_name
             fixedcut.GWFlg = form_GWFlg
             fixedcut.prodFlg = form_prodFlg
             fixedcut.OTFlg = form_OTFlg

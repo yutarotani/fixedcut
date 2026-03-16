@@ -74,6 +74,7 @@
                 <th>固定カットID</th>
                 <th>仮見出し</th>
                 <th>一体化時文字列</th>
+                <th>登録面名</th>
                 <th>カラー画像</th>
                 <th>モノクロ画像</th>
                 <th><font color="red">ＧＷ登録対象</font></th>
@@ -87,6 +88,7 @@
             <td class="text-center fw-bold">{{ res.id }}</td>
             <td class="text-center"><input name="midashi" type="text" value="{{ res.midashi }}" class="fw-bold"></input></td>
             <td class="text-center"><input name="Str" type="text" value="{{ res.Str }}" class="fw-bold"></input></td>
+            <td class="text-center"><input name="men_name" type="text" value="{{ res.men_name or '' }}" class="fw-bold"></input></td>
             <td>
                 {% if ".eps" in res.colorUrl %}
                 <a href="/download/static/{{ res.colorUrl }}">ダウンロード</a></td>
